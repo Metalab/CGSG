@@ -1,17 +1,22 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <unistd.h>
+#include <stdio.h>
 
 const char *threshwin = "threshold";
 const char *outlinewin = "outline";
+const char *polywin = "polygon approximation";
 
 int main(int argc, char** argv) 
 {
-  int key;
+  int key,i;
   IplImage *img = cvLoadImage("../metalabumgebung.png", -1);
   IplImage *binarized, *contImg;
   CvMemStorage *storage;
-  CvSeq *contours;
+  CvSeq *contours, *polyContours;
+  CvContour *contour;
+  CvSeqReader reader;
+  CvPoint *point;
 
   binarized = cvCreateImage(cvSize(img->width, img->height), IPL_DEPTH_8U, 1);
   contImg = cvCreateImage(cvSize(img->width, img->height), IPL_DEPTH_8U, 3);
@@ -31,12 +36,41 @@ int main(int argc, char** argv)
   cvFindContours(binarized, storage, &contours, sizeof(CvContour), CV_RETR_EXTERNAL,
                   CV_CHAIN_APPROX_SIMPLE);
 
-  cvDrawContours(contImg, contours, CV_RGB(255,0,0), CV_RGB(0,255,0), 1, 1, CV_AA, cvPoint(0,0));
+  cvDrawContours(contImg, contours, CV_RGB(255,0,0), CV_RGB(0,255,0), 2, 1, CV_AA, cvPoint(0,0));
 
   cvNamedWindow(outlinewin, CV_WINDOW_AUTOSIZE);
   cvShowImage(outlinewin, contImg); 
-  
 
+  //approximate polygons
+  polyContours = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, 3, 1);
+  
+  cvSetZero(contImg);
+  cvDrawContours(contImg, polyContours, CV_RGB(255,0,0), CV_RGB(0,255,0), 1, 1, CV_AA, cvPoint(0,0));
+  cvNamedWindow(polywin, CV_WINDOW_AUTOSIZE);
+  cvShowImage(polywin, contImg);
+
+  //try to read outline of first poly contour and print to console
+  printf("total = %d\n", polyContours->total);
+
+  while(polyContours) 
+  {
+    printf("POLY:\n");
+    for (i=0; i < polyContours->total; i++) 
+    {
+      point = (CvPoint*)cvGetSeqElem(polyContours, i);
+      printf("   %4d, %4d\n", point->x, point->y);
+    }
+    printf("\n");
+    polyContours = polyContours->h_next;
+  }
+
+/*
+  cvStartReqdSeq(polyContours, &reader, 0);
+
+  for (i=0; i < polyContours->total; i++) {
+    CV_READ_SEQ_ELEM(contour, reader); 
+  }
+*/
   while (1) {
     key = cvWaitKey(10);
   

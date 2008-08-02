@@ -4,3 +4,5 @@ supposed to load the vienna citymap on the fly and render buildings as simple bl
 
 sample url for requesting citymap from wien.gv.at:
 http://www.wien.gv.at/wms/adr/service.aspx?version=1.1.1&request=GetMap&geobegr=rathausstr&onr=1&WIDTH=1024&HEIGHT=1024&EXTENTWIDTH=500&MARKER=FALSE&LAYERS=KATBEV_GEB_F
+
+OpenCV reference: http://www710.univ-lyon1.fr/~bouakaz/OpenCV-0.9.5/docs/

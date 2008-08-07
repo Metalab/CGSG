@@ -33,7 +33,9 @@ Building:
 ---------
 
 SDLVU uses the CMake build system generator [http://www.cmake.org],
-so you need to install cmake before building.
+so you need to install cmake before building. For Ubuntu 8.04 Hardy
+use the backported 2.6 version of cmake obtainable from
+https://code.launchpad.net/ubuntu/hardy/amd64/cmake/2.6.0-4ubuntu1~hardy1
 
 Unix instructions:
 

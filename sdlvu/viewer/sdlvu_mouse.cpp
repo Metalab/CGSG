@@ -311,7 +311,9 @@ void SDLVU::SetInertiaOn(int onOrOff)
 
 Uint32 SDLVU::InertialTimerFunc(Uint32 interval, void * param)
 {
-  int winID = (int)param;
+  //FIXME: actually this is an int, but on you cant cast void* to int as
+  //int may be small than void* (as on 64bit x86 linux)
+  intptr_t winID = (intptr_t)param;
   SDLVU *g = SDLVUs[winID];
   g->DoInertia();
   return interval;

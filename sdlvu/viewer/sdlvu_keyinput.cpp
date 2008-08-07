@@ -33,6 +33,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <assert.h>
 
 using namespace std;
 
@@ -159,10 +160,11 @@ void SDLVU::setNavigationMode(int value)
   case NAV_MODE_HYPERBALL:
   case NAV_MODE_DRIVE:
   case NAV_MODE_TRANSLATE:
-  case NAV_MODE_LOOK:
+  case NAV_MODE_LOOK: {
     SDLVU *g = GetSDLVU();
     g->WorldNavMode=value;
     g->SetInertiaOn(0);
+    }
     break;
   default:
     assert (0 && "invalid navigation mode!");
@@ -207,10 +209,11 @@ void SDLVU::Keyboard(const SDL_KeyboardEvent & event)
     case 'o': GetSDLVU()->ToggleInOutMode(); break;
     case '0': GetSDLVU()->AllCamsResetToOrig(); break;
 
-    case 'i':  // toggle inertia
+    case 'i': {  // toggle inertia
       SDLVU *g = GetSDLVU();
       if (g->GetInertiaEnabled()) { g->SetInertiaEnabled(0); g->SetInertiaOn(0); }
       else g->SetInertiaEnabled(1);
+      }
       break;
 
     case 'd': { // dump current camera parameters

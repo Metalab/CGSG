@@ -103,7 +103,7 @@ SDLVU::~SDLVU()
  * @see InitWin 
  */
 
-int SDLVU::Init(char *windowtitle, 
+int SDLVU::Init(const char *windowtitle, 
                 int windowstartx, int windowstarty,
                 int windowwidth, int windowheight, unsigned int userflags)
 {

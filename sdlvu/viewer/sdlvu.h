@@ -107,7 +107,7 @@ public:
   SDLVU();
   virtual ~SDLVU();
 
-  int Init(char * windowtitle, 
+  int Init(const char * windowtitle, 
            int windowstartx, int windowstarty,
            int windowwidth, int windowheight, 
            unsigned int visualmode = 0);

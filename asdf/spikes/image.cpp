@@ -10,7 +10,7 @@ const char *polywin = "polygon approximation";
 int main(int argc, char** argv) 
 {
   int key,i;
-  IplImage *img = cvLoadImage("../metalabumgebung.png", -1);
+  IplImage *img = cvLoadImage("../metalabumgebungbig.png", 3);
   IplImage *binarized, *contImg;
   CvMemStorage *storage;
   CvSeq *contours, *polyContours;
@@ -36,13 +36,13 @@ int main(int argc, char** argv)
   cvFindContours(binarized, storage, &contours, sizeof(CvContour), CV_RETR_EXTERNAL,
                   CV_CHAIN_APPROX_SIMPLE);
 
-  cvDrawContours(contImg, contours, CV_RGB(255,0,0), CV_RGB(0,255,0), 2, 1, CV_AA, cvPoint(0,0));
+  cvDrawContours(contImg, contours, CV_RGB(255,0,0), CV_RGB(0,255,0), 1, 1, CV_AA, cvPoint(0,0));
 
   cvNamedWindow(outlinewin, CV_WINDOW_AUTOSIZE);
   cvShowImage(outlinewin, contImg); 
 
   //approximate polygons
-  polyContours = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, 3, 1);
+  polyContours = cvApproxPoly(contours, sizeof(CvContour), storage, CV_POLY_APPROX_DP, 1, 1);
   
   cvSetZero(contImg);
   cvDrawContours(contImg, polyContours, CV_RGB(255,0,0), CV_RGB(0,255,0), 1, 1, CV_AA, cvPoint(0,0));

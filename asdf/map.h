@@ -68,7 +68,7 @@ class ViennaMap
     //by a mutex for multithreaded use of the map object
     SDL_mutex *cvRessourcesGuard;
     CvMemStorage *cvMemStorage;
-    IplImage *tempBinarizedImage;
+    _IplImage *tempBinarizedImage;
 
     //holds all loaded map fragments
     SDL_mutex *fragmentGuard;

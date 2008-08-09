@@ -128,7 +128,7 @@ const PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
       (*polygon)[i].x = x;
       (*polygon)[i].y = y;
 
-      if (x == 1 || y == 1 || x == fragmentImageWidth-1 || y == fragmentImageHeight-1)
+      if (x == 1 || y == 1 || x == fragmentImageWidth-2 || y == fragmentImageHeight-2)
         incomplete = true;
     }
 
@@ -164,7 +164,7 @@ IplImage* ViennaMap::getImage(int x, int y) {
     //TODO: get from web!!
     if (x != 0 || y != 0) return NULL;
 
-    return cvLoadImage("metalabumgebungbig.png", 3);
+    return cvLoadImage("metalabumgebung.png", 3);
 }
 
 void tryCompletePolygons(int x, int y) {

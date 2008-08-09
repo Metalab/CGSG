@@ -10,7 +10,7 @@ const char *polywin = "polygon approximation";
 int main(int argc, char** argv) 
 {
   int key,i;
-  IplImage *img = cvLoadImage("../metalabumgebungbig.png", 3);
+  IplImage *img = cvLoadImage("../metalabumgebung.png", 3);
   IplImage *binarized, *contImg;
   CvMemStorage *storage;
   CvSeq *contours, *polyContours;

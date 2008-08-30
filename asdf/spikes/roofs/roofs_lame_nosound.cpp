@@ -14,7 +14,7 @@
 
 #include <vector>
 
-#include "vorbis_fft.h"
+//#include "vorbis_fft.h"
 
 #include <stdio.h>
 #include <iostream>
@@ -428,7 +428,6 @@ void MySDLVU::DrawPoly(const Polygon &poly, float height, float specVar) {
 
 
 
-vorbisFFT sound;
 
 // viewer main loop
 // calls display and does event processing
@@ -463,17 +462,17 @@ int MySDLVU::MyMainLoop()
         pfKeyboard(event.key);
 					switch( event.key.keysym.sym ){
 						case SDLK_RIGHT:
-							sound.skip((signed int)32768);
+//							sound.skip((signed int)32768);
 						break;
 						case SDLK_LEFT:
-							sound.skip(-32768);
+//							sound.skip(-32768);
 						break;
 						
 						case SDLK_UP:
-							sound.volumeChange((float)1.5);
+//							sound.volumeChange((float)1.5);
 						break;
 						case SDLK_DOWN:
-							sound.volumeChange((float)-1.5);
+//							sound.volumeChange((float)-1.5);
 						break;
 					}					
         break;

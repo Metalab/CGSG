@@ -264,16 +264,18 @@ void MySDLVU::DrawRoofTesselated(Building &building) {
   VertexIndexList *verticesOrder = building.orderedVertices;
   if ((*poly).size() < 3) return;
 	
-  glBegin(GL_TRIANGLE_STRIP);
+  glBegin(GL_TRIANGLES);
   glColor3f(0.,  1,  0);
 //  for (int i=0; i < (*verticesOrder).size(); i++) {
-//  for (int i=(*verticesOrder).size()-1, n; i >= 0; i--) {
+  for (int i=(*verticesOrder).size()-1, n; i >= 0; i--) {
 
 //  for (int i=3, n; i >= 0; i--) {
-for (int i=0; i <= 3; i++) {
+//for (int i=0; i <= 3; i++) {
     glVertex3f((*poly)[(*verticesOrder)[i]].x, -(*poly)[(*verticesOrder)[i]].y, 50);
     
   }
+	
+	
   glEnd();
 
 }
@@ -305,15 +307,26 @@ typedef struct {
 
 //    non class function:
 
+void mytessBegin(GLenum type) {
+	printf("%d\n",type);
+}
+/*
+ 
+ check this tesscalback: http://www.sfr-fresh.com/unix/privat/Coin-2.5.0.tar.gz:a/Coin-2.5.0/src/base/SbGLUTessellator.cpp
+ see callbackfunction there
+ */
 void tessVcbd(void *v, void *user_data) { //USE WITH GLU_TESS_VERTEX_DATA
   tessUserData *tud = (tessUserData*) user_data;
-	const Polygon **p = (const Polygon**) tud->poly;
+  //const Polygon **p = (const Polygon**) tud->poly;
+  
+	
+	
 	Building *building = (Building*) tud->building;
   VertexIndexList* vil = (*building).orderedVertices;
   //
   
-  int vCount = tud->vIndex;
-  int pSize = tud->polySize;
+  //int vCount = tud->vIndex;
+  //int pSize = tud->polySize;
   int vertexIndex = ((GLdouble*)v)[3];
   
   (*vil).push_back(vertexIndex);
@@ -343,28 +356,31 @@ void MySDLVU::TessellateBuilding(Building &building) {
   //this is done in 2 loops with an extra array of all vertices, because glutessvertex doesnt work with temporary/local vars only!
   //see man page
   //
-  printf("newPoly\n");
-	GLdouble **tmppd = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
-	this->roofVertices = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
+	
+	
+	GLdouble *tmppd = (GLdouble*) malloc(sizeof(GLdouble) * (*poly).size()*4);
+  printf("newPoly with %d vertices\n",(*poly).size());
+	//GLdouble **tmppd = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
+	//this->roofVertices = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
 	for (int i=(*poly).size()-1; i >= 0; i--) {	
-		tmppd[i] = (double*) malloc((sizeof( double) * 4));
-		tmppd[i][0] =  (*poly)[i].x;
-		tmppd[i][1] = -(*poly)[i].y;
-		tmppd[i][2] =  50;
-    tmppd[i][3] =  i;
+//		tmppd[i] = (double*) malloc((sizeof( double) * 4));
+		tmppd[4*i] =  (*poly)[i].x;
+		tmppd[4*i+1] = -(*poly)[i].y;
+		tmppd[4*i+2] =  50;
+		tmppd[4*i+3] =  i;
 	}
 	
-	gluTessCallback(tess,  GLU_TESS_BEGIN, (GLvoid(*)())&glBegin);
+	gluTessCallback(tess,  GLU_TESS_BEGIN, (GLvoid(*)())&mytessBegin);
 	//gluTessCallback(tess, GLU_TESS_VERTEX,	(GLvoid (*)())&tessVcb);				//FIXME
 	gluTessCallback(tess, GLU_TESS_VERTEX_DATA,	(GLvoid (*)())&tessVcbd);
-	gluTessCallback(tess, GLU_TESS_END,		(GLvoid(*)())&glEnd);
+	//gluTessCallback(tess, GLU_TESS_END,		(GLvoid(*)())&glEnd);
 	
 	rvc = 0; // for tessVcb
   tessUserData polyData;
-  polyData.poly = &(*poly);
+  polyData.poly = poly;
   polyData.building = &building;
   polyData.vIndex = 0;
-  polyData.polySize = (*poly).size();
+  polyData.polySize = poly->size();
 	//gluTessBeginPolygon (tess, (GLvoid*)&poly); //&poly = USER_DATA
   gluTessBeginPolygon (tess, (GLvoid*)&polyData); //&poly = USER_DATA
 	gluTessBeginContour (tess);
@@ -372,16 +388,13 @@ void MySDLVU::TessellateBuilding(Building &building) {
 	for (int i=(*poly).size()-1, n; i >= 0; i--) {
     n = i-1;
     if (n < 0) n = (*poly).size()-1;
-		gluTessVertex (tess, (GLdouble*)tmppd[i], tmppd[i]);
-		//gluTessVertex (tess, (GLdouble*)tmppd[n], tmppd[i]);
+		gluTessVertex (tess, (GLdouble*)&tmppd[4*i], &tmppd[4*i]);
 	}
 	gluTessEndContour (tess);
 	gluEndPolygon (tess);
 	
 	gluDeleteTess(tess);
-	for (int i=(*poly).size()-1; i >= 0; i--) {	
-		free(tmppd[i]);
-	}
+
 	free(tmppd);
 }
 
@@ -422,7 +435,7 @@ void MySDLVU::Display()
 	BuildingList::const_iterator build, buildend;
 	//PolygonList::const_iterator poly, polyend;
 	build = buildings->begin();
-  buildend = buildings->end();
+	buildend = buildings->end();
 	for (;build != buildend; build++) {
       
 			DrawRoofTesselated(**build);

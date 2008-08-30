@@ -264,10 +264,14 @@ void MySDLVU::DrawRoofTesselated(Building &building) {
   VertexIndexList *verticesOrder = building.orderedVertices;
   if ((*poly).size() < 3) return;
 	
-  glBegin(GL_TRIANGLE_FAN);
+  glBegin(GL_TRIANGLE_STRIP);
   glColor3f(0.,  1,  0);
-  for (int i=0; i < (*verticesOrder).size(); i++) {
-    glVertex3d((*poly)[(*verticesOrder)[i]].dx, -(*poly)[(*verticesOrder)[i]].dy, 50);
+//  for (int i=0; i < (*verticesOrder).size(); i++) {
+//  for (int i=(*verticesOrder).size()-1, n; i >= 0; i--) {
+
+//  for (int i=3, n; i >= 0; i--) {
+for (int i=0; i <= 3; i++) {
+    glVertex3f((*poly)[(*verticesOrder)[i]].x, -(*poly)[(*verticesOrder)[i]].y, 50);
     
   }
   glEnd();
@@ -281,7 +285,6 @@ void MySDLVU::generateRoofVertices() {
 	build = buildings->begin();
   buildend = buildings->end();
 	for (;build != buildend; build++) {
-      
 			TessellateBuilding(**build);
 	}
 }
@@ -336,6 +339,10 @@ void MySDLVU::TessellateBuilding(Building &building) {
   //so waere das teil am stack und is von selber futsch wenn die funktion returned: (tipp von stefan)
   //GLdouble *foo[poly.size()];
   
+  // gotcha:
+  //this is done in 2 loops with an extra array of all vertices, because glutessvertex doesnt work with temporary/local vars only!
+  //see man page
+  //
   printf("newPoly\n");
 	GLdouble **tmppd = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
 	this->roofVertices = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());

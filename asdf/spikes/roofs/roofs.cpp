@@ -64,7 +64,8 @@ class MySDLVU : public SDLVU
 		void DrawFloor();
 		
 		void DrawRoofs(const Polygon &poly);
-    void DrawRoofTesselated(Building &building);
+//    void DrawRoofTesselated(Building &building);
+    void DrawRoofTesselated(Building &building, float height, float specVar);
     
 		GLfloat maxX, maxY, minX, minY;
 		GLdouble **roofVertices;
@@ -166,7 +167,8 @@ void MySDLVU::DrawFloor() {
 	glPushMatrix();
 	glScalef(0.01, 0.01, 0.01);
   glTranslatef(-500,500,0);
-	glTranslatef(0,-1024,0);	//this is stupid  FIXME
+  glTranslatef(0,-3200,0);
+	//glTranslatef(0,-1024,0);	//this is stupid  FIXME
 	glBegin(GL_QUADS);
 		glBegin(GL_QUADS);
 
@@ -259,19 +261,17 @@ void MySDLVU::DrawRoofs(const Polygon &poly) {
 	free(tmppd);
 }
 
-void MySDLVU::DrawRoofTesselated(Building &building) {
+void MySDLVU::DrawRoofTesselated(Building &building, float height, float specVar) {
   Polygon *poly = (Polygon*) building.poly;
   VertexIndexList *verticesOrder = building.orderedVertices;
   if ((*poly).size() < 3) return;
 	
   glBegin(GL_TRIANGLES);
-  glColor3f(0.,  1,  0);
-//  for (int i=0; i < (*verticesOrder).size(); i++) {
-  for (int i=(*verticesOrder).size()-1, n; i >= 0; i--) {
+  //glColor3f(0.,  1,  0);
+  glColor3f(1.,  specVar/16384,  specVar/65384);
 
-//  for (int i=3, n; i >= 0; i--) {
-//for (int i=0; i <= 3; i++) {
-    glVertex3f((*poly)[(*verticesOrder)[i]].x, -(*poly)[(*verticesOrder)[i]].y, 50);
+  for (int i=(*verticesOrder).size()-1, n; i >= 0; i--) {
+    glVertex3f((*poly)[(*verticesOrder)[i]].x, -(*poly)[(*verticesOrder)[i]].y, height+(specVar/2));
     
   }
 	
@@ -292,11 +292,6 @@ void MySDLVU::generateRoofVertices() {
 }
 
 
-void MySDLVU::tessVcb(void *v) {
-
-}
-
-
 typedef struct {
   const Polygon *poly;
   Building *building;
@@ -312,7 +307,7 @@ void mytessError(GLenum err, void *)
 }
 
 void mytessBegin(GLenum type, void *user_data) {
-	printf("begin with type: %d\n",type);
+	//printf("begin with type: %d\n",type);
 }
 
 void mytessEdgeFlagCB(GLboolean flag ) {
@@ -328,7 +323,7 @@ void tessVcbd(void *v, void *user_data) { //USE WITH GLU_TESS_VERTEX_DATA
   int vertexIndex = ((GLdouble*)v)[3];
   (*vil).push_back(vertexIndex);
   
-  printf("vertexIndex: %d\n",vertexIndex);
+  //printf("vertexIndex: %d\n",vertexIndex);
 }
 
 
@@ -348,7 +343,7 @@ void MySDLVU::TessellateBuilding(Building &building) {
   //
 		
 	GLdouble *tmppd = (GLdouble*) malloc(sizeof(GLdouble) * (*poly).size()*4);
-  printf("newPoly with %d vertices\n",(*poly).size());
+  //printf("newPoly with %d vertices\n",(*poly).size());
 
 	for (int i=(*poly).size()-1; i >= 0; i--) {	
 		tmppd[4*i] =  (*poly)[i].x;
@@ -409,8 +404,6 @@ void MySDLVU::Display()
   glTranslatef(-500,500,0);
   glColor3f(0.95,0.95,0.95);
 	
-  
-  
   for (;poly != polyend; poly++) {
 			DrawPoly(**poly, 50, MySpectrum[this->poly2spec[p]]);
 			//DrawRoofs(**poly);
@@ -419,13 +412,15 @@ void MySDLVU::Display()
 		p++;
   }
 
+  p=0;
 	BuildingList::const_iterator build, buildend;
 	//PolygonList::const_iterator poly, polyend;
 	build = buildings->begin();
 	buildend = buildings->end();
 	for (;build != buildend; build++) {
       
-			DrawRoofTesselated(**build);
+			DrawRoofTesselated(**build, 50, MySpectrum[this->poly2spec[p]]);
+      p++;
 	}
   
 
@@ -450,15 +445,16 @@ void MySDLVU::DrawPoly(const Polygon &poly, float height, float specVar) {
   for (int i=poly.size()-1, n; i >= 0; i--) {
     n = i-1;
     if (n < 0) n = poly.size()-1;
-    glColor3f(0.,  0,  0);
+    glColor3f(1.,  specVar/16384,  specVar/65384);
 		
-//		glVertex3f(poly[i].x, -poly[i].y, height+(specVar/2));
-//    glVertex3f(poly[n].x, -poly[n].y, height+(specVar/2));
-    glVertex3f(poly[i].x, -poly[i].y, height);
-    glVertex3f(poly[n].x, -poly[n].y, height);
+		glVertex3f(poly[i].x, -poly[i].y, height+(specVar/2));
+    glVertex3f(poly[n].x, -poly[n].y, height+(specVar/2));
+//    glVertex3f(poly[i].x, -poly[i].y, height);
+//    glVertex3f(poly[n].x, -poly[n].y, height);
 
 		//farbe "unten":
-		glColor3f(0.7,0.7,0.7);
+		//glColor3f(0.7,0.7,0.7);
+    glColor3f(0,0,0);
 		
     glVertex3f(poly[n].x, -poly[n].y, 0.);
     
@@ -591,7 +587,7 @@ int main(int argc, char *argv[])
 
 	float myLight[] = { 0.1, 0.6, 0.9, 0.9 };
 	glLightfv(GL_LIGHT0, GL_AMBIENT, myLight);
-	glEnable(GL_NORMALIZE);
+//  glEnable(GL_NORMALIZE);
 
   // camera setup
   Vec3f modelmin(-3, -1, 5), modelmax(1, 1, 1); 

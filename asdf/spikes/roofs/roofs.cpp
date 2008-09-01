@@ -306,36 +306,29 @@ typedef struct {
 } tessUserData;
 
 //    non class function:
-
-void mytessBegin(GLenum type) {
-	printf("%d\n",type);
+void mytessError(GLenum err, void *)
+{
+  gluErrorString(err);
 }
-/*
- 
- check this tesscalback: http://www.sfr-fresh.com/unix/privat/Coin-2.5.0.tar.gz:a/Coin-2.5.0/src/base/SbGLUTessellator.cpp
- see callbackfunction there
- */
+
+void mytessBegin(GLenum type, void *user_data) {
+	printf("begin with type: %d\n",type);
+}
+
+void mytessEdgeFlagCB(GLboolean flag ) {
+	//printf("flagCB: %d\n",flag);
+}
+
+
 void tessVcbd(void *v, void *user_data) { //USE WITH GLU_TESS_VERTEX_DATA
   tessUserData *tud = (tessUserData*) user_data;
-  //const Polygon **p = (const Polygon**) tud->poly;
-  
-	
-	
 	Building *building = (Building*) tud->building;
   VertexIndexList* vil = (*building).orderedVertices;
-  //
-  
-  //int vCount = tud->vIndex;
-  //int pSize = tud->polySize;
+
   int vertexIndex = ((GLdouble*)v)[3];
-  
   (*vil).push_back(vertexIndex);
   
   printf("vertexIndex: %d\n",vertexIndex);
-  //printf("");
-//  Point3D *pp = (Point3D*) p[vCount];
-
-  
 }
 
 
@@ -349,29 +342,23 @@ void MySDLVU::TessellateBuilding(Building &building) {
 	
 	GLUtesselator *tess = gluNewTess();
   
-  //so waere das teil am stack und is von selber futsch wenn die funktion returned: (tipp von stefan)
-  //GLdouble *foo[poly.size()];
-  
   // gotcha:
   //this is done in 2 loops with an extra array of all vertices, because glutessvertex doesnt work with temporary/local vars only!
   //see man page
   //
-	
-	
+		
 	GLdouble *tmppd = (GLdouble*) malloc(sizeof(GLdouble) * (*poly).size()*4);
   printf("newPoly with %d vertices\n",(*poly).size());
-	//GLdouble **tmppd = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
-	//this->roofVertices = (GLdouble**) malloc(sizeof(GLdouble) * (*poly).size());
+
 	for (int i=(*poly).size()-1; i >= 0; i--) {	
-//		tmppd[i] = (double*) malloc((sizeof( double) * 4));
 		tmppd[4*i] =  (*poly)[i].x;
 		tmppd[4*i+1] = -(*poly)[i].y;
 		tmppd[4*i+2] =  50;
 		tmppd[4*i+3] =  i;
 	}
 	
-	gluTessCallback(tess,  GLU_TESS_BEGIN, (GLvoid(*)())&mytessBegin);
-	//gluTessCallback(tess, GLU_TESS_VERTEX,	(GLvoid (*)())&tessVcb);				//FIXME
+	gluTessCallback(tess,  GLU_TESS_BEGIN_DATA, (GLvoid(*)())&mytessBegin);
+  gluTessCallback(tess,  GLU_TESS_EDGE_FLAG, (GLvoid(*)())&mytessEdgeFlagCB); //forces generation of GL_TRIANGLES only  yeah!
 	gluTessCallback(tess, GLU_TESS_VERTEX_DATA,	(GLvoid (*)())&tessVcbd);
 	//gluTessCallback(tess, GLU_TESS_END,		(GLvoid(*)())&glEnd);
 	

@@ -71,8 +71,8 @@ class ViennaMap
     static const int nrFragmentColumns = 100;
     static const int nrFragmentRows = 100;
 
-    static const int fragmentImageWidth = 1024;
-    static const int fragmentImageHeight = 1024;
+    static const int fragmentImageWidth = 3200;
+    static const int fragmentImageHeight = 3200;
 
     static const float fragmentWidth = 500.;
     static const float fragmentHeight = 500.;

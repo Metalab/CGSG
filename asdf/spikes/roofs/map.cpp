@@ -207,7 +207,7 @@ IplImage* ViennaMap::getImage(int x, int y) {
     //TODO: get from web!!
     if (x != 0 || y != 0) return NULL;
 
-    return cvLoadImage("../../metalabumgebung.png", 3);
+    return cvLoadImage("../../metalabumgebungbig.png", 3);
 }
 
 void tryCompletePolygons(int x, int y) {

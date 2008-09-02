@@ -28,8 +28,9 @@
 
 using namespace std;
 
-float MySpectrum[4096];
-size_t MySpectrumsize;
+const int SPECTRUM_LENGTH = 4096;
+float MySpectrum[SPECTRUM_LENGTH];
+
 
 FMOD::System *fmodsystem;
 FMOD::Sound *sound;
@@ -105,7 +106,7 @@ void MySDLVU::postSoundSetup() {
 	this->polycount = polygons->size();
 	this->poly2spec = new int[this->polycount];
 	spectrumIndex=0;
-	genSpec2PolyMapping(this->polycount, 256);
+	genSpec2PolyMapping(this->polycount, SPECTRUM_LENGTH/8);      //FIXME  here i constrain the effective spectrum we use in a shitty hardcoded way
 	findPlaneMaxima();
 
 	rvc=0;
@@ -124,8 +125,8 @@ void MySDLVU::genSpec2PolyMapping(int polyCount, size_t spectrumsize) {
 	
 	for(int i=0;i<polyCount;i++) {
 		poly2spec[i] = specIndex;
-		printf("polyIter: %f\n",polyIterator);
-		printf("i: %d specIDX: %d\n", i, specIndex);
+		//printf("polyIter: %f\n",polyIterator);
+		//printf("i: %d specIDX: %d\n", i, specIndex);
 		if( (float) i > polyIterator ) {
 			if(specIndex > spectrumsize) {
 				printf("specIndex out of bounds. setting 0\n");
@@ -170,7 +171,6 @@ void MySDLVU::findPlaneMaxima() {
 }
 
 
-
 void MySDLVU::DrawFloor() {
 	glPushMatrix();
 	glScalef(0.01, 0.01, 0.01);
@@ -192,83 +192,6 @@ void MySDLVU::DrawFloor() {
 	glPopMatrix();
 }
 
-/*
-Tessellation:
-
-1. Allocate a new GLU tessellation object:
-GLUtesselator *tess = gluNewTess();
-2. Assign callbacks for use with this tessellation object:
-	gluTessCallback (tess, GLU_TESS_BEGIN, tcbBegin);
-	gluTessCallback (tess, GLU_TESS_VERTEX, tcbVertex);
-	gluTessCallback (tess, GLU_TESS_END, tcbEnd);
-2a. If your primitive is self-intersecting, you must also specify a callback to create new vertices:
-	gluTessCallback (tess, GLU_TESS_COMBINE, tcbCombine);
-3. Send the complex primitive data to GLU:
-// Assumes: // GLdouble data[numVerts][3];
-// ...and assumes the array has been filled with 3D vertex data.
-	gluTessBeginPolygon (tess, NULL);
-	gluTessBeginContour (tess);
-	for (i=0; i<sizeof(data)/(sizeof(GLdouble)*3);i++)
-		gluTessVertex (tess, data[i], data[i]);
-
-	gluTessEndContour (tess);
-	gluEndPolygon (tess);
-	
-4. In your callback routines, make the appropriate OpenGL calls:
-
-void tcbBegin (GLenum prim); { glBegin (prim); }
-void tcbVertex (void *data) { glVertex3dv ((GLdouble *)data); }
-void tcbEnd (); { glEnd (); }
-void tcbCombine (GLdouble c[3], void *d[4], GLfloat w[4], void **out) {
-	GLdouble *nv = (GLdouble *) malloc(sizeof(GLdouble)*3); nv[0] = c[0]; nv[1] = c[1]; nv[2] = c[2]; *out = nv;  
-}
-
-*/
-
-/*
-	FIXME;
-	trianglestrip coords for roofs should be generated once (per ViennaMapfragment)
-	move it to map.cpp?
-*/
-
-void MySDLVU::DrawRoofs(const Polygon &poly) {
-	if (poly.size() < 3)
-		return;
-	
-	GLUtesselator *tess = gluNewTess();
-	
-	int blah = poly.size();
-	
-	GLdouble **tmppd = (GLdouble**) malloc(sizeof(GLdouble) * blah);
-	for (int i=poly.size()-1; i >= 0; i--) {	
-		tmppd[i] = (double*) malloc(sizeof( double) * 3);
-		tmppd[i][0] =  poly[i].x;
-		tmppd[i][1] = -poly[i].y;
-		tmppd[i][2] =  50;
-	}
-	
-	
-	gluTessCallback(tess,  GLU_TESS_BEGIN, (GLvoid(*)())&glBegin);
-	gluTessCallback(tess, GLU_TESS_VERTEX,	(GLvoid (*)())&glVertex3dv);
-	gluTessCallback(tess, GLU_TESS_END,		(GLvoid(*)())&glEnd);
-	
-	gluTessBeginPolygon (tess, NULL);
-	gluTessBeginContour (tess);
-	glColor3f(0.,  1,  0);
-	for (int i=poly.size()-1, n; i >= 0; i--) {
-    n = i-1;
-    if (n < 0) n = poly.size()-1;
-		gluTessVertex (tess, (GLdouble*)tmppd[i], tmppd[i]);
-		gluTessVertex (tess, (GLdouble*)tmppd[n], tmppd[n]);
-	}
-	gluTessEndContour (tess);
-	gluEndPolygon (tess);
-	gluDeleteTess(tess);
-	for (int i=poly.size()-1; i >= 0; i--) {	
-		free(tmppd[i]);
-	}
-	free(tmppd);
-}
 
 void MySDLVU::DrawRoofTesselated(Building &building, float height, float specVar) {
   Polygon *poly = (Polygon*) building.poly;
@@ -400,11 +323,8 @@ void MySDLVU::Display()
 	
 	PolygonList::const_iterator poly, polyend;
 	
-	if(spectrumIndex>(MySpectrumsize) ) {
-		printf("SPECINDEX TO HIGH!!!!!!!!\n\n\n\n\n\n");
-		spectrumIndex=0;
-	}
-	  glPushMatrix();
+
+  glPushMatrix();
 
   poly = polygons->begin();
   polyend = polygons->end();
@@ -493,7 +413,7 @@ int MySDLVU::MyMainLoop()
 	this->postSoundSetup();
   
 	while (!done) {
-		channel->getSpectrum(MySpectrum, 4096, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
+		channel->getSpectrum(MySpectrum, SPECTRUM_LENGTH, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
 		//channel->getSpectrum(MySpectrum, 4096, 0, FMOD_DSP_FFT_WINDOW_HAMMING);
     pfDisplay();
     usleep(5000);

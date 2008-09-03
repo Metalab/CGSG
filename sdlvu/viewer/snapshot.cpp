@@ -22,6 +22,12 @@
 
 #include <stdio.h>
 
+#ifdef _WIN32
+extern "C" {
+#include <windows.h>
+}
+#endif
+
 #ifdef __APPLE__
   #include <OpenGL/gl.h>
   #include <OpenGL/glu.h>

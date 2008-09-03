@@ -19,6 +19,12 @@
 // camdisplay.cpp
 //============================================================================
 
+#ifdef _WIN32
+extern "C" {
+#include <windows.h>
+}
+#endif
+
 #ifdef __APPLE__
   #include <OpenGL/gl.h>
 #else

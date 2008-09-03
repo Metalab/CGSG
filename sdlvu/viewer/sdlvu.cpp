@@ -131,7 +131,9 @@ int SDLVU::Init(const char *windowtitle,
   SDL_WM_SetCaption(windowtitle, NULL);
   WindowID = 0; // FIXME: Unneessary, remove later
 
+#ifdef GL_MULTISAMPLE
   glEnable(GL_MULTISAMPLE);
+#endif
 
   return InitWin(WindowID);
 }
@@ -181,7 +183,11 @@ SDLVU::MainLoop()
   bool done = false;
   while (!done) {
     pfDisplay();
+#ifdef _WIN32
+	Sleep(5);
+#else
     usleep(5000);
+#endif
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       switch (event.type) {

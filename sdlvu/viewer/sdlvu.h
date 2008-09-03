@@ -18,8 +18,16 @@
 #ifndef SDLVU_H_
 #define SDLVU_H_
 
+#ifdef _WIN32
+extern "C" {
+#include <windows.h>
+}
+#endif
+
 #include <time.h>            // FOR TIMED PATH PLAYBACK (glvu_camview)
 #include <sys/timeb.h>       // FOR FRAME TIMING (glvu_camview)
+
+
 
 // FIXME: use CMAKE to include correct headers depending on platform
 #ifdef __APPLE__
@@ -29,6 +37,7 @@
   #include <GL/gl.h>
   #include <GL/glu.h>
 #endif
+
 #include <SDL.h>
 
 #include <vec3f.hpp>

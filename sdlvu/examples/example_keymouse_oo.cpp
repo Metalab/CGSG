@@ -104,10 +104,10 @@ int main(int argc, char *argv[])
         eye(1, 2, 3), lookatcntr(0, 0, 0), up(0, 1, 0);
   float yfov = 45;
   float aspect = 1; 
-  float near = 0.1f;  // near plane distance relative to model diagonal length
-  float far = 10.0f;  // far plane distance (also relative)
+  float nearClip = 0.1f;  // near plane distance relative to model diagonal length
+  float farClip = 10.0f;  // far plane distance (also relative)
   sdlvu.SetAllCams(modelmin, modelmax, eye, lookatcntr, 
-                   up, yfov, aspect, near, far);
+                   up, yfov, aspect, nearClip, farClip);
 
   sdlvu.MainLoop();
 

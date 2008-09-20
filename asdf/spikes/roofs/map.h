@@ -32,6 +32,7 @@ struct Point2D {
 struct Point3D {
   int x,y,z;
   GLdouble dx,dy,dz;
+  
   GLdouble v[3];
   int *tessOrder;
   
@@ -40,15 +41,27 @@ struct Point3D {
   Point3D() { }
 };
 
+struct Raster2VertexFactor {
+  int rasterpoint;
+  float distance;
+};
+
 typedef std::vector<Point3D> Polygon;
 typedef std::vector<Polygon*> PolygonList;
 
 typedef std::vector<int> VertexIndexList;
 
+typedef std::vector<Raster2VertexFactor> Raster2VertexList;
+ 
 class Building {
   public:
     Polygon *poly;
     VertexIndexList *orderedVertices;
+    Raster2VertexList *rasterPoints2affect;
+    GLdouble dCenterX, dCenterY;
+    GLfloat fCenterX, fCenterY;
+    GLfloat fmeanCenterX, fmeanCenterY;
+    int debugflag;
 };
 
 typedef std::vector<Building*> BuildingList;

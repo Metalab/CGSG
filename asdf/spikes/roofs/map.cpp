@@ -12,6 +12,8 @@ ViennaMap::ViennaMap() {
   
 }
 
+
+
 void freePolygonList(PolygonList& list) {
   PolygonList::iterator begin = list.begin(), end=list.end();
   for(; begin != end; begin++)
@@ -99,8 +101,8 @@ BuildingList& ViennaMap::getBuildingsOfFragment(int x, int y) {
 
   if (frag != NULL) return frag->buildings;
   
-  printf("FIXME: fragment not loaded while getting buildings\n");
-  //return ;
+  printf("FATAL:   FIXME: fragment not loaded while getting buildings\n");
+  exit(1);
 }
 
 const PolygonList& ViennaMap::getPolygonsOfFragment(int x, int y) {
@@ -150,8 +152,10 @@ const PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
     //(*building).poly[0].x=0;
     (*building).orderedVertices = new VertexIndexList();
     VertexIndexList* vil = (*building).orderedVertices;
-    //(*vil).push_back(0);
+    
 
+
+    
     for (int i=0; i < polys->total; i++) {
       point = (CvPoint*)cvGetSeqElem(polys, i);
       int x, y;
@@ -167,11 +171,64 @@ const PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
       (*bpoly)[i].dx = (GLdouble)x;
       (*bpoly)[i].dy = (GLdouble)y;
       (*bpoly)[i].dz = (GLdouble)0;
-
+      //tmpX += x;
+      //tmpY += y;
+      
       if (x == 1 || y == 1 || x == fragmentImageWidth-2 || y == fragmentImageHeight-2)
         incomplete = true;
     }
+    
 
+//calculate center of poly (center of gravity)
+//http://local.wasp.uwa.edu.au/~pbourke/geometry/polyarea/
+    
+    //printf("new poly with %d polys\n",polys->total);
+    
+    //mean center ( not center of gravity)
+    float tmpX=0;
+    float tmpY=0;
+    float tmpResult=0;
+    for (int i=0; i < polys->total; i++) {
+      tmpX +=  (*bpoly)[i].x;
+      tmpY +=  (*bpoly)[i].y;
+    }
+    (*building).fmeanCenterX = tmpX/polys->total;
+    (*building).fmeanCenterY = tmpY/polys->total;
+    
+    double A=0;
+    int p=0;
+
+//area of poly:
+    int i,j;
+    double area = 0;
+
+    for (i=0;i<polys->total;i++) {
+      j = (i + 1) % polys->total;
+      area += (*bpoly)[i].x * (*bpoly)[j].y;
+      area -= (*bpoly)[i].y * (*bpoly)[j].x;
+//      area += ((*bpoly)[i].x * (*bpoly)[j].y) - ((*bpoly)[i].y * (*bpoly)[j].x);
+    }
+
+    area /= 2;
+    A = (area < 0 ? area * -1 : area );
+
+    
+
+//centroid:
+    double tmpResultx=0;
+    double tmpResulty=0;
+    p=0;
+    for (int i=0; i < polys->total; i++) {
+      p = (i + 1) % polys->total;
+      tmpResultx += ( (double)(*bpoly)[i].x + (double)(*bpoly)[p].x ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
+      tmpResulty += ( (double)(*bpoly)[i].y + (double)(*bpoly)[p].y ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
+    }
+
+    (*building).dCenterX = ( 1 / (A * 6)) * tmpResultx;
+    (*building).dCenterY = ( 1 / (A * 6)) * tmpResulty;
+    (*building).fCenterX = ( 1 / (A * 6)) * tmpResultx;
+    (*building).fCenterY = ( 1 / (A * 6)) * tmpResulty;
+    
     if (!incomplete) {
       frag->polygons.push_back(polygon);
       frag->buildings.push_back(building);

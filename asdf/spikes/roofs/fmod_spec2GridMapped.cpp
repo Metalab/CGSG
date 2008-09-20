@@ -492,31 +492,26 @@ void MySDLVU::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
   
   int spacingX = maxX / rasterX;
   int spacingY = maxY / rasterY;
-  
+
   glBegin(GL_LINES);
   
+  for(int x = 0; x < rasterX; x++) {
   
-  for(int x = 0; x <= rasterX; x++) {
-  
-      for(int y = 0; y <= rasterY; y++) {
-        float specHeight = MySpectrum[x*rasterY+y]*4000;
+      for(int y = 0; y < rasterY; y++) {
+        //float specHeight = MySpectrum[x*rasterY+y]*4000;
+        float specHeight = 0;
         glColor3f(0.0,  0.86*MySpectrum[x*rasterY+y],  0.8*MySpectrum[x*rasterY+y]);
         glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY + spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY + spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY + spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY + spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
         glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
         glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
         glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
-      }
-        
+      }        
   }
-  for(int y = 0; y <= rasterY; y++) {
-      glVertex3f( 0, -spacingY*y, rasterZ);
-      glVertex3f( maxX, -spacingY*y, rasterZ);
-  }
-  
+
   glEnd();
 }
 
@@ -611,7 +606,7 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
         }
     }
     printf("\nminRP: %d\t",minRP);
-    printf("maxRP: %d\tn",maxRP);
+    printf("maxRP: %d\t\n",maxRP);
     //exit(1);
     //glEnd();
     //*/

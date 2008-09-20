@@ -128,8 +128,9 @@ class MySDLVU : public SDLVU
     
     SpecBuffer specRingBuffer;
     
+    virtual void Motion(const SDL_MouseMotionEvent & event);
     bool muteToggle;
-    
+    bool motionToggleModifier;
   private:
 		GLfloat Rshift;
 		GLfloat Gshift;
@@ -176,6 +177,10 @@ class MySDLVU : public SDLVU
     void genSpec2PolyMapping(int polyCount, size_t spectrumsize, int specStartIndex);
     void genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance);
     void genSpec2RasterMapping(int rasterX, int rasertY, int specStartIndex);
+    
+    void DrawGrid(int rasterX, int rasterY, int rasterZ);
+    void DrawFFTGrid(int rasterX, int rasterY, int rasterZ);
+    void DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY);
     /*
     float spectrumHistory[SPEC_HISTORY_SIZE][SPECTRUM_LENGTH];
     float *rbReadPos;
@@ -207,6 +212,7 @@ MySDLVU::MySDLVU() {
   //setupSpectrumHistory();
   
   muteToggle = false;
+  motionToggleModifier=false;
 }
 
 
@@ -265,12 +271,8 @@ void MySDLVU::DrawBuildingByRasterSpectrum(Building &building, float height) {
 void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex) {
   int rasterSize = rasterX*rasterY;
   float rasterIterator = (float)rasterSize / (float)SPECTRUM_LENGTH;
-  if(rasterIterator < 1) {
-    printf("rasterIterator: %f\n",rasterIterator);
-    printf("fatal booboo: raster to small for full spectrum\n");
-    //exit(1);
-  }
-  printf("rasterIterator: %d\n",rasterIterator);
+  
+  //printf("rasterIterator: %d\n",rasterIterator);
   
   this->spec2raster = new int[rasterSize];
   
@@ -295,7 +297,7 @@ void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex
 //      printf("s2r:%d\n",i*2+q);
 //      this->spec2raster[i+q] = specIndex;
         int p = i * rasterY + q;
-        printf("p: %d\t",p);
+        //printf("p: %d\t",p);
         this->spec2raster[p] = specIndex;
         specIndex++;
       c++;
@@ -308,12 +310,12 @@ void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex
   }
   
   for(int i=0;i < rasterSize; i++) {
-      printf("s2r%d:\t%d\t", i, this->spec2raster[i]);
+      //printf("s2r%d:\t%d\t", i, this->spec2raster[i]);
     }
   
   
-  printf("Last specIndex:%d\n",specIndex);
-  printf("Last c:%d\n",c);
+  //printf("Last specIndex:%d\n",specIndex);
+  //printf("Last c:%d\n",c);
   //exit(1);
   
   //map spectrum to n rows of spectrum:
@@ -451,13 +453,95 @@ void MySDLVU::DrawRoofTesselated(Building &building, float height, float specVar
 }
 
 
-//void MySDLVU::genMappingRaster() {
-//  
-//}
+void MySDLVU::DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY) {
+  int maxX = this->map.fragmentImageWidth;
+  int maxY = this->map.fragmentImageHeight;
+  
+  int spacingX = maxX / rasterX;
+  int spacingY = maxY / rasterY;
+  
+  Raster2VertexList* rasterList = building.rasterPoints2affect;
+  Raster2VertexList::const_iterator rasterPoint, rasterPointEnd;
 
-//void MySDLVU::genPoly2RasterMapping() {
-//  
-//}
+  rasterPoint = rasterList->begin();
+  rasterPointEnd = rasterList->end();
+  float dist = 0;
+  
+  glBegin(GL_LINES);
+  for (int i=(*rasterList).size()-1, n; i >= 0; i--) {
+    float y = (*rasterList)[i].rasterpoint % rasterY;
+    float x = ( (*rasterList)[i].rasterpoint - y ) / rasterY;
+    //rvf.rasterpoint = x * rasterY + y;
+    dist = (*rasterList)[i].distance;
+    glColor3f(1/dist,  1/dist,  1);
+    glVertex3f( -building.fCenterX, building.fCenterY, 0);
+    glColor3f(0.0,  0.,  0.); 
+    glVertex3f( spacingX*x, -spacingY*y, gridHeight);
+  }
+  glEnd();
+  //glColor3f(1/dist,  1/dist,  1);
+  //glVertex3f( -building->fCenterX, building->fCenterY, 0);
+  //glColor3f(0.0,  0.,  0.); 
+  //glVertex3f( spacingX*x, -spacingY*y, 0);
+}
+
+
+void MySDLVU::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
+  int maxX = this->map.fragmentImageWidth;
+  int maxY = this->map.fragmentImageHeight;
+  
+  int spacingX = maxX / rasterX;
+  int spacingY = maxY / rasterY;
+  
+  glBegin(GL_LINES);
+  
+  
+  for(int x = 0; x <= rasterX; x++) {
+  
+      for(int y = 0; y <= rasterY; y++) {
+        float specHeight = MySpectrum[x*rasterY+y]*4000;
+        glColor3f(0.0,  0.86*MySpectrum[x*rasterY+y],  0.8*MySpectrum[x*rasterY+y]);
+        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY + spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY + spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY + spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY + spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
+      }
+        
+  }
+  for(int y = 0; y <= rasterY; y++) {
+      glVertex3f( 0, -spacingY*y, rasterZ);
+      glVertex3f( maxX, -spacingY*y, rasterZ);
+  }
+  
+  glEnd();
+}
+
+
+void MySDLVU::DrawGrid(int rasterX, int rasterY, int rasterZ=0) {
+  int maxX = this->map.fragmentImageWidth;
+  int maxY = this->map.fragmentImageHeight;
+  
+  int spacingX = maxX / rasterX;
+  int spacingY = maxY / rasterY;
+  
+  glBegin(GL_LINES);
+  glColor3f(0.0,  0.86,  0.8); 
+  
+  for(int x = 0; x <= rasterX; x++) {
+        glVertex3f( spacingX*x, 0, rasterZ);
+        glVertex3f( spacingX*x, -maxY, rasterZ);
+  }
+  for(int y = 0; y <= rasterY; y++) {
+      glVertex3f( 0, -spacingY*y, rasterZ);
+      glVertex3f( maxX, -spacingY*y, rasterZ);
+  }
+  
+  glEnd();
+}
 
 //50,50 for 1000 polys?(3200px*3200px at 500 extentwidth)
 void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance) {
@@ -711,10 +795,13 @@ void MySDLVU::Display()
 	build = buildings->begin();
 	buildend = buildings->end();
   
+  DrawGrid(20,20,-200);
+  DrawFFTGrid(20,20,200);
 	for (;build != buildend; build++) {
       DrawCentroid(**build, 100);
       //DrawMeanCenter(**build, 100);
       //DrawRoofTesselated(**build, 50, MySpectrum[this->poly2spec[p]]);
+      DrawCentroid2GridLines(**build, 0, -200, 20, 20);
       DrawBuildingByRasterSpectrum(**build, 50);
       p++;
 	}
@@ -764,6 +851,78 @@ void MySDLVU::DrawPoly(const Polygon &poly, float height, float specVar) {
   glEnd();
 }
 
+
+/// Handler for 'active' mouse drag events, i.e. dragging with a button pressed.
+/**
+ *  This method can be overridden to perform application specific
+ *  funcionality (e.g. direct manipulation of scene objects).  The
+ *  default implementation does some important work for handling
+ *  camera manipulation (world navigation), so if you override this
+ *  method you should always call SDLVU::Mouse() from your override if
+ *  you wish to preserve the built-in navigation capabilities.  
+ *
+ *  The exact effect the default implementation has on the current 
+ *  camera depends upon the current world navigation mode.  
+ *  See SetWorldNavMode().
+ *
+ *  Users not interested in creating an object-oriented app can simply
+ *  call SDLVU's \c SetMotionFunc to set a callback directly. If you
+ *  do so you can still call GetCurrent()->Motion() or 
+ *  SDLVU::DefaultMotionFunc(), in your handler to get the default 
+ *  behavior back.
+ *
+ *  @param event The most recent SDL_MouseMotionEvent.
+ * 
+ *  @see Motion, SetWorldNavMode 
+ */
+void MySDLVU::Motion(const SDL_MouseMotionEvent & event)
+{
+  // STORE PREVIOUS NEW MOUSE POSITION (OLD)
+  OldX=NewX; OldY=NewY;
+
+  //if (LeftButtonDown) //move without that nasty buttonpress needed, see mainloop & motionToggleModifier
+  {
+    // STORE THE NEW MOUSE POSITION
+    NewX=event.x; NewY=event.y;
+
+    SDL_Surface * surface = SDL_GetVideoSurface();
+    int WW = surface->w;
+    int WH = surface->h;
+
+    switch(GetWorldNavMode())
+    {
+      // -------  WORLD NAVIGATION -------
+      case NAV_MODE_TRACKBALL:
+        if (CtrlPressed) { TrackBallX(OldX,NewX,WW); DriveY(OldY,NewY,WH); }
+        else { TrackBallX(OldX,NewX,WW); TrackBallY(OldY,NewY,WH); }
+        break;
+      case NAV_MODE_HYPERBALL:
+        if (CtrlPressed) { 
+          HyperBall(OldX,OldY,NewX,OldY,WW,WH); DriveY(OldY,NewY,WH); }
+        else { HyperBall(OldX,OldY,NewX,NewY,WW,WH); }
+        break;
+      case NAV_MODE_DRIVE:
+        if (CtrlPressed) { TranslateX(NewX,OldX,WW); TranslateY(NewY,OldY,WH); }
+        else if (AltPressed) { LookX(OldX,NewX,WW); LookY(OldY,NewY,WH); }
+        else {
+          LookX(OldX,NewX,WW);
+          DriveY(OldY,NewY,WH);
+          //printf("OldY: \n",);
+          //printf("\n",);
+        }
+        break;
+      case NAV_MODE_TRANSLATE:
+        TranslateX(OldX,NewX,WW); 
+        if (CtrlPressed) DriveY(OldY,NewY,WH); else TranslateY(OldY,NewY,WH);
+        break;
+      case NAV_MODE_LOOK:
+        if (CtrlPressed) { TranslateX(OldX,NewX,WW); TranslateY(OldY,NewY,WH); }
+        else if (AltPressed) { LookX(OldX,NewX,WW); DriveY(OldY,NewY,WH); }
+        else { LookX(OldX,NewX,WW); LookY(OldY,NewY,WH); }
+        break;
+    };
+  }
+}
 
 
 
@@ -867,6 +1026,10 @@ int MySDLVU::MyMainLoop()
                 channel->setMute(muteToggle);
 						break;
             
+            case SDLK_e:
+                motionToggleModifier = !motionToggleModifier;
+                printf("motionToggleModifier: %d\n",motionToggleModifier);
+						break;
 					}					
         break;
       case SDL_MOUSEBUTTONDOWN:
@@ -874,9 +1037,14 @@ int MySDLVU::MyMainLoop()
         pfMouse(event.button);
         break;
       case SDL_MOUSEMOTION:
-        if (event.motion.state & SDL_BUTTON(1)) { // left button down
+        if(motionToggleModifier) {
           pfMotion(event.motion);
+        } else {
+          if (event.motion.state & SDL_BUTTON(1)) { // left button down
+            pfMotion(event.motion);
+          }
         }
+        
         break;
       }
     }

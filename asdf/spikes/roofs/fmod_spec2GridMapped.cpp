@@ -21,6 +21,8 @@
 #include <fmod.hpp>
 #include <fmod_errors.h>
 
+//baergh:
+//#include "/Developer/FMOD Programmers API/examples/common/wincompat.h"
 
 using namespace std;
 
@@ -28,90 +30,28 @@ const int SPECTRUM_LENGTH = 4096;
 float MySpectrum[SPECTRUM_LENGTH];
 const int SPEC_DEPTH = 100;
 
+//size of raster spectrum w spectrum_length gets mapped to
+const int DEF_RASTER_X = 16;
+const int DEF_RASTER_Y = 128;
 
 FMOD::System *fmodsystem;
 FMOD::Sound *sound;
 FMOD::Channel *channel;
+FMOD_RESULT result;
+FMOD_CREATESOUNDEXINFO exinfo;
+bool  iscoreaudio = false;
 
-class SpecBuffer {
-	GLfloat buffer[SPEC_DEPTH * SPECTRUM_LENGTH];
-	int readPos;
-	int writePos;
-	int readFrame;
-	int writeFrame;
-	GLfloat internalReadBuffer;
-	
-	public:
-		SpecBuffer();
-		void insert(GLfloat);
-		GLfloat read();
-		void resetWritePos();
-		void resetReadPos();
-		void resetReadFrame();
-		void resetWriteFrame();
-		void nextReadFrame();
-		void previousReadFrame();
-		void nextWriteFrame();
-    
-    void insertFullSpectrum(float *spectrumP);
-	private:
-};
+#define OUTPUTRATE          44100
 
-SpecBuffer::SpecBuffer() {
-	readFrame = 0;
-	writeFrame = 0;
-	readPos = 0;
-	writePos = 0;
-	for( int i = 0; i < (SPEC_DEPTH*SPECTRUM_LENGTH); i++) {
-		buffer[i] = 0.0;
-	}
+void ERRCHECK(FMOD_RESULT result)
+{
+    if (result != FMOD_OK)
+    {
+        printf("FMOD error! (%d) %s\n", result, FMOD_ErrorString(result));
+        exit(-1);
+    }
 }
 
-void SpecBuffer::insert(GLfloat specValue) {
-	buffer[writeFrame * SPECTRUM_LENGTH + writePos] = specValue;
-	writePos = (++writePos)%SPECTRUM_LENGTH;
-}
-
-void SpecBuffer::insertFullSpectrum(float *spectrumP) {
-  memcpy((void*)&buffer[writeFrame * SPECTRUM_LENGTH], (void*)spectrumP, SPECTRUM_LENGTH);
-  this->nextWriteFrame();
-	//buffer[writeFrame * SPECTRUM_LENGTH] = specValue;
-	//writePos = (++writePos)%SPECTRUM_LENGTH;
-}
-
-GLfloat SpecBuffer::read() {
-	internalReadBuffer = buffer[ readFrame * SPECTRUM_LENGTH + readPos] ;
-	readPos = (++readPos)%(SPECTRUM_LENGTH);
-	return internalReadBuffer;
-}
-
-void SpecBuffer::resetWritePos() {
-	writePos = 0;
-}
-
-void SpecBuffer::resetReadPos() {
-	readPos = 0;
-}
-
-void SpecBuffer::nextReadFrame() {
-	readFrame = (++readFrame)%SPEC_DEPTH;
-}
-
-void SpecBuffer::previousReadFrame() {
-	readFrame = (--readFrame)%SPEC_DEPTH;
-}
-
-void SpecBuffer::nextWriteFrame() {
-	writeFrame = (++writeFrame)%SPEC_DEPTH;
-}
-
-void SpecBuffer::resetReadFrame() {
-	readFrame = 0;
-}
-
-void SpecBuffer::resetWriteFrame() {
-	writeFrame = 0;
-}
 
 // SDLVU subclass definition
 class MySDLVU : public SDLVU
@@ -126,19 +66,21 @@ class MySDLVU : public SDLVU
     virtual ~MySDLVU() { }
     virtual void Display();
     
-    SpecBuffer specRingBuffer;
+    //SpecBuffer specRingBuffer;
     
     virtual void Motion(const SDL_MouseMotionEvent & event);
     bool muteToggle;
     bool motionToggleModifier;
+    
+    bool drawBuildingsToggle;
+    bool drawGridToggle;
+    bool drawSpec2GridLinesToggle;
+    bool drawRoofToggle;
+    
   private:
-		GLfloat Rshift;
-		GLfloat Gshift;
-		GLfloat Bshift;
-		GLfloat R;
-		GLfloat G;
-		GLfloat B;
-		GLfloat blah;
+    int raster_x;
+    int raster_y;
+    
 		float colors[2048];
 		int colorIndex;
 		int tmpframecount;
@@ -181,15 +123,7 @@ class MySDLVU : public SDLVU
     void DrawGrid(int rasterX, int rasterY, int rasterZ);
     void DrawFFTGrid(int rasterX, int rasterY, int rasterZ);
     void DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY);
-    /*
-    float spectrumHistory[SPEC_HISTORY_SIZE][SPECTRUM_LENGTH];
-    float *rbReadPos;
-    float *rbWritePos;
-    int historySpecIndex;
-    void setupSpectrumHistory();
-    void rememberSpectrum(void *Spectrum,int size);
-    float* readHistorySpectrum(int offset);
-    */
+    
 };
 
 void tessVcbd(void *v, void *user_data);
@@ -207,12 +141,19 @@ MySDLVU::MySDLVU() {
 	maxY=FLT_MIN;
 	minY=FLT_MAX;
   
-  spectrumDivisor = 8;
+  spectrumDivisor = 2;
   specStartIndex = 0;
   //setupSpectrumHistory();
   
+  raster_x = DEF_RASTER_X;
+  raster_y = DEF_RASTER_Y;
+  
   muteToggle = false;
   motionToggleModifier=false;
+  
+  drawBuildingsToggle = true;
+  drawGridToggle = false;
+  drawSpec2GridLinesToggle = false;
 }
 
 
@@ -226,7 +167,7 @@ void MySDLVU::DrawBuildingByRasterSpectrum(Building &building, float height) {
   Raster2VertexList *rasterPointList = building.rasterPoints2affect;
   VertexIndexList *verticesOrder = building.orderedVertices;
 	
-  glBegin(GL_TRIANGLES);
+  //glBegin(GL_TRIANGLES);
   //glColor3f(0.,  1,  0);
   glColor3f(1.,  (specVar*2000)/16384,  (specVar*2000)/65384);
 
@@ -234,17 +175,26 @@ void MySDLVU::DrawBuildingByRasterSpectrum(Building &building, float height) {
   for (int i=(*rasterPointList).size()-1, n; i >= 0; i--) {
     int rp = (*rasterPointList)[i].rasterpoint;
     float dist = (*rasterPointList)[i].distance;
-    specDistHeightFactor +=1;
-    //printf("rp: %d s2rRP: %d spec:%f\t", rp, this->spec2raster[rp], MySpectrum[this->spec2raster[rp]]);
-    //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * (1/dist);         //rvf.rasterpoint = (x*rasterX)+(y);
-    specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * dist;         //rvf.rasterpoint = (x*rasterX)+(y);
+    //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * (dist);         //rvf.rasterpoint = (x*rasterX)+(y);
+    
+    
+    //use average spectrum var of all rasterpoints for this building:
+    //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;         //rvf.rasterpoint = (x*rasterX)+(y);
+    
+    //use maximum spectrum var of all rasterpoints for this building
+    float tmpspecv = MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;
+    specVar = tmpspecv > specVar ? tmpspecv : specVar; 
   }
-  specVar = (specDistHeightFactor/(*rasterPointList).size());
+  //use average spectrum var of all rasterpoints for this building:
+  //specVar = (specDistHeightFactor/(*rasterPointList).size());
 	
+  
   //DrawPoly(*poly, 80, specVar*100);
-  DrawRoofTesselated(building, height, specVar*100);
+  if(drawRoofToggle)
+    DrawRoofTesselated(building, height, specVar*100);  //*1/specVar     --> clifford je hoeher frequenz desto kleiner amplitude. energie = f*a??? FIXME  (also above! -> specVar =...)
   ///*
-//	glColor3f(1., 0, (GLfloat)MySpectrum[spectrumIndex]);
+  
+  //draw the building:
   glBegin(GL_QUADS);
 
   for (int i=(*poly).size()-1, n; i >= 0; i--) {
@@ -283,7 +233,7 @@ void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex
   
   //init
   for(int i=0;i < rasterSize; i++) {
-      this->spec2raster[i] = specIndex;
+      this->spec2raster[i] = specIndex; //=0
       //specIndex++;
   }
   
@@ -302,11 +252,7 @@ void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex
         specIndex++;
       c++;
     }
-//    specIndex++;
-    //if( i % rasterIterator == 0) {
-    //  printf("i:%d\n",i);
-    //  specIndex++;
-    //}
+
   }
   
   for(int i=0;i < rasterSize; i++) {
@@ -322,9 +268,10 @@ void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex
 }
 
 
+//old dont use!!!
 //spectrumsize is also used as "window" size 
 void MySDLVU::genSpec2PolyMapping(int polyCount, size_t spectrumsize, int specStartIndex) {
-	
+	printf("genSpec2PolyMapping is borken & deprecated\n");
 	float polyIterator = (float)polyCount / ((float)spectrumsize);
 	float tmpPolyIterator = polyIterator;
   if(specStartIndex > SPECTRUM_LENGTH || specStartIndex < 0) {
@@ -353,32 +300,6 @@ void MySDLVU::genSpec2PolyMapping(int polyCount, size_t spectrumsize, int specSt
 	//printf("genSpec2Poly end\n");
 }
 
-/*
-void MySDLVU::setupSpectrumHistory() {
-  rbReadPos = spectrumHistory[0];
-  rbWritePos = spectrumHistory[0];
-  historySpecIndex=0;
-}
-
-
-void MySDLVU::rememberSpectrum(void *Spectrum,int size) {
-  //add newest spectrum(MySpectrum)
-  memcpy(rbWritePos,Spectrum,SPECTRUM_LENGTH);//tgt, data
-
-  if(rbWritePos == (float*)&spectrumHistory+((SPEC_HISTORY_SIZE-1)*SPECTRUM_LENGTH)) {
-    rbWritePos = (float*)&spectrumHistory[0];
-    historySpecIndex=0;
-  } else {
-    rbWritePos = (float*)&spectrumHistory+(SPECTRUM_LENGTH*historySpecIndex);
-    historySpecIndex++;
-  }
-}
-
-float* MySDLVU::readHistorySpectrum(int offset) {
-  
-  return spectrumHistory[offset];
-}
-*/
 
 void MySDLVU::findPolyMaxima(const Polygon &poly) {
 	if (poly.size() < 3) return;
@@ -447,7 +368,6 @@ void MySDLVU::DrawRoofTesselated(Building &building, float height, float specVar
     glVertex3f((*poly)[(*verticesOrder)[i]].x, -(*poly)[(*verticesOrder)[i]].y, height+(specVar));
   }
 
-	
   glEnd();
 
 }
@@ -473,16 +393,12 @@ void MySDLVU::DrawCentroid2GridLines(Building &building, float height, float gri
     float x = ( (*rasterList)[i].rasterpoint - y ) / rasterY;
     //rvf.rasterpoint = x * rasterY + y;
     dist = (*rasterList)[i].distance;
-    glColor3f(1/dist,  1/dist,  1);
-    glVertex3f( -building.fCenterX, building.fCenterY, 0);
-    glColor3f(0.0,  0.,  0.); 
+    glColor3f(1/dist*0.6,  1/dist*0.75,  0.3);
+    glVertex3f( -building.fCenterX, building.fCenterY, 0+MySpectrum[this->spec2raster[(*rasterList)[i].rasterpoint]+1]* ((16000/SPECTRUM_LENGTH * (x*rasterY+y+1))) * 50);
+    glColor3f(0.023,  0.3*(1/dist),  0.2); 
     glVertex3f( spacingX*x, -spacingY*y, gridHeight);
   }
   glEnd();
-  //glColor3f(1/dist,  1/dist,  1);
-  //glVertex3f( -building->fCenterX, building->fCenterY, 0);
-  //glColor3f(0.0,  0.,  0.); 
-  //glVertex3f( spacingX*x, -spacingY*y, 0);
 }
 
 
@@ -499,8 +415,9 @@ void MySDLVU::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
   
       for(int y = 0; y < rasterY; y++) {
         //float specHeight = MySpectrum[x*rasterY+y]*4000;
-        float specHeight = 0;
-        glColor3f(0.0,  0.86*MySpectrum[x*rasterY+y],  0.8*MySpectrum[x*rasterY+y]);
+        float specHeight = MySpectrum[x*rasterY+y] * ((16000/SPECTRUM_LENGTH * (x*rasterY+y+1))) * 50;
+        //float specHeight = 0;
+        glColor3f(0.0,  0.86*MySpectrum[x*rasterY+y]*10,  0.8*MySpectrum[x*rasterY+y]*10);
         glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
         glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
         glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
@@ -546,30 +463,15 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
     int maxX = this->map.fragmentImageWidth;
     int maxY = this->map.fragmentImageHeight;
     int rasterZ = 0;
-    //glBegin(GL_LINES);
-    //glColor3f(0.0,  0.86,  0.8); 
+     
     int spacingX = maxX / rasterX;
     int spacingY = maxY / rasterY;
     
-    /*
-    for(int x = 0; x <= rasterX; x++) {
-        glVertex3f( spacingX*x, 0, rasterZ);
-        glVertex3f( spacingX*x, -maxY, rasterZ);
-    }
-
-
-    
-    for(int y = 0; y <= rasterY; y++) {
-        glVertex3f( 0, -spacingY*y, rasterZ);
-        glVertex3f( maxX, -spacingY*y, rasterZ);
-    }
-    //*/
-    
-    
-    
     //for buildings
     ///*
-    int minRP, maxRP = 0;
+    int minRP = 0;
+    int maxRP = 0;
+    //printf(" minRP:%d maxRP:%d\n", minRP, maxRP);
     BuildingList::const_iterator build, buildend;
     PolygonList::const_iterator poly, polyend;
     build = buildings->begin();
@@ -578,26 +480,20 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
     for (;build != buildend; build++) {
       Building *building = *build;
 //      Raster2VertexList *rasterList = building->rasterPoints2affect;
+      
       (*building).rasterPoints2affect = new Raster2VertexList();
       Raster2VertexList* rasterList = (*building).rasterPoints2affect;
       
-        //glVertex3f( -building->fCenterX, building->fCenterY, 0);
-        //glVertex3f( -building->fCenterX, building->fCenterY, rasterZ);
         for(int x=0; x < rasterX; x++) {
           for(int y=0; y < rasterY; y++) {
+            //printf(" x:%f y:%f\n", x, y);
             dist = sqrt(pow(spacingX*x - -1*building->fCenterX,2) + pow(-spacingY*y - building->fCenterY,2) );
             if(dist <= maxDistance) {
-              //glColor3f(1/dist,  1/dist,  1);
-              //glVertex3f( -building->fCenterX, building->fCenterY, 0);
-              //glColor3f(0.0,  0.,  0.); 
-              //glVertex3f( spacingX*x, -spacingY*y, 0);
               //save the raster point for this the building
               Raster2VertexFactor rvf;
-//              rvf.rasterpoint = x*y;//FIXME  shouldnt it be x*rasterX + y  -1
-
               rvf.rasterpoint = x * rasterY + y;
               maxRP = rvf.rasterpoint > maxRP ? rvf.rasterpoint : maxRP;
-              minRP = rvf.rasterpoint < minRP ? rvf.rasterpoint : minRP;
+              minRP = rvf.rasterpoint < minRP && rvf.rasterpoint > 0 ? rvf.rasterpoint : minRP;
               //printf("rp: %d\t",rvf.rasterpoint);
               rvf.distance = dist;
               (*rasterList).push_back(rvf);
@@ -773,40 +669,34 @@ void MySDLVU::Display()
   glTranslatef(-500,500,0);
   glColor3f(0.95,0.95,0.95);
 	
-  for (;poly != polyend; poly++) {
-      
-			//DrawPoly(**poly, 50, MySpectrum[this->poly2spec[p]]);
-      
-      //DrawPoly(**poly, 50, specRingBuffer.read());
-      //if(p%30 < 1) {
-      //  specRingBuffer.nextReadFrame();
-      //}
-		p++;
-  }
-///*
+  ///*
   p=0;
 	BuildingList::const_iterator build, buildend;
 	//PolygonList::const_iterator poly, polyend;
 	build = buildings->begin();
 	buildend = buildings->end();
   
-  DrawGrid(20,20,-200);
-  DrawFFTGrid(20,20,200);
+  //DrawGrid(raster_x, raster_y,-200);
+  
+  if (drawGridToggle)
+    DrawFFTGrid(raster_x, raster_y,0);
+    
 	for (;build != buildend; build++) {
-      DrawCentroid(**build, 100);
+      //DrawCentroid(**build, 100);
       //DrawMeanCenter(**build, 100);
-      //DrawRoofTesselated(**build, 50, MySpectrum[this->poly2spec[p]]);
-      DrawCentroid2GridLines(**build, 0, -200, 20, 20);
-      DrawBuildingByRasterSpectrum(**build, 50);
+      
+      if(drawSpec2GridLinesToggle)
+        DrawCentroid2GridLines(**build, 0, -200, raster_x, raster_y);
+      if(drawBuildingsToggle)
+        DrawBuildingByRasterSpectrum(**build, 50);
       p++;
 	}
   
-//  genPoly2RasterFactors(20, 20, 200);
   
   glPopMatrix();
 //*/	
 	//DrawFloor();
-	//spectrumIndex=0;
+	
   EndFrame();
 	
 
@@ -826,12 +716,9 @@ void MySDLVU::DrawPoly(const Polygon &poly, float height, float specVar) {
     if (n < 0) n = poly.size()-1;
     glColor3f(1.,  (specVar*2000)/16384,  (specVar*2000)/65384);
 		
-//		glVertex3f(poly[i].x, -poly[i].y, height+(specVar/2));
-//    glVertex3f(poly[n].x, -poly[n].y, height+(specVar/2));
+
     glVertex3f(poly[i].x, -poly[i].y, height+(specVar*3000));
     glVertex3f(poly[n].x, -poly[n].y, height+(specVar*3000));
-//    glVertex3f(poly[i].x, -poly[i].y, height);
-//    glVertex3f(poly[n].x, -poly[n].y, height);
 
 		//farbe "unten":
 		//glColor3f(0.7,0.7,0.7);
@@ -949,19 +836,17 @@ int MySDLVU::MyMainLoop()
 	rvc=0;
 	generateRoofVertices();
   
-  this->genPoly2RasterFactors(20, 20, 200);
-  this->genSpec2RasterMapping(20,20,0);
+  this->genPoly2RasterFactors(raster_x, raster_y, 400);
+  this->genSpec2RasterMapping(raster_x, raster_y,0);
   
 	while (!done) {
-		channel->getSpectrum(MySpectrum, SPECTRUM_LENGTH, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
-    specRingBuffer.insertFullSpectrum(MySpectrum);
+    fmodsystem->update();
     
-    //rememberSpectrum(MySpectrum,SPECTRUM_LENGTH);
-		//channel->getSpectrum(MySpectrum, 4096, 0, FMOD_DSP_FFT_WINDOW_HAMMING);
-    
-    //channel->setPosition(hopToPosition, FMOD_TIMEUNIT_MS);
-    channel->getPosition(&soundPosition,  FMOD_TIMEUNIT_MS);
-    //printf("%ud\n",soundPosition);
+    result = channel->getSpectrum(MySpectrum, SPECTRUM_LENGTH, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
+    ERRCHECK(result);
+
+//    channel->getPosition(&soundPosition,  FMOD_TIMEUNIT_MS);
+//    printf("\rsoundPos:%d",soundPosition);
     
     
     pfDisplay();
@@ -985,46 +870,68 @@ int MySDLVU::MyMainLoop()
         
 					switch( event.key.keysym.sym ){
 						case SDLK_RIGHT:
-              hopToPosition = soundPosition + 1000;
+              hopToPosition = soundPosition + 10000;
               channel->setPosition(hopToPosition, FMOD_TIMEUNIT_MS);
 						break;
 						case SDLK_LEFT:
-              hopToPosition = soundPosition - 1000;
+              hopToPosition = soundPosition - 10000;
               channel->setPosition(hopToPosition, FMOD_TIMEUNIT_MS);
 						break;
 						
-            case SDLK_q:
-                specStartIndex += specStartIndex < SPECTRUM_LENGTH ? 1 : 0;
-                printf("specStartIndex: %d\n",specStartIndex);
-                genSpec2PolyMapping(this->polycount, SPECTRUM_LENGTH/spectrumDivisor, specStartIndex);
-						break;
-            case SDLK_a:
-                specStartIndex -= specStartIndex > 1 ? 1 : 0;
-                printf("specStartIndex: %d\n",specStartIndex);
-                genSpec2PolyMapping(this->polycount, SPECTRUM_LENGTH/spectrumDivisor, specStartIndex);
-						break;
             
             
 						case SDLK_UP:
-                spectrumDivisor -= spectrumDivisor > 1 ? 1 : 0;
-                printf("specdivisor: %d\n",spectrumDivisor);
-                genSpec2PolyMapping(this->polycount, SPECTRUM_LENGTH/spectrumDivisor, specStartIndex);
+                if(raster_x > 1) {
+                  spectrumDivisor /= spectrumDivisor > 1 ? 2 : 1;
+                  raster_x /=  2;
+                  raster_y *= 2;
+                }
+                printf("specdivisor: %d, x:%d y:%d\n",spectrumDivisor, raster_x, raster_y);
+                this->genPoly2RasterFactors(raster_x, raster_y, 400);
+                this->genSpec2RasterMapping(raster_x, raster_y, 0);
 						break;
 						case SDLK_DOWN:
-                spectrumDivisor += 1;
-                printf("specdivisor: %d\n",spectrumDivisor);
-                genSpec2PolyMapping(this->polycount, SPECTRUM_LENGTH/spectrumDivisor, specStartIndex);
+                if(raster_y > 1) {
+                  spectrumDivisor *= 2;
+                  raster_x *=  2;
+                  raster_y /= 2;
+                }
+                printf("specdivisor: %d, x:%d y:%d\n",spectrumDivisor, raster_x, raster_y);
+                this->genPoly2RasterFactors(raster_x, raster_y, 400);
+                this->genSpec2RasterMapping(raster_x, raster_y, 0);
 						break;
             
             case SDLK_u:
                 muteToggle = !muteToggle;
                 channel->setMute(muteToggle);
+                printf("muteToggle: %d\n",muteToggle);
 						break;
             
             case SDLK_e:
                 motionToggleModifier = !motionToggleModifier;
                 printf("motionToggleModifier: %d\n",motionToggleModifier);
 						break;
+            
+            
+            
+            case SDLK_q:
+                drawBuildingsToggle = !drawBuildingsToggle;
+                printf("drawBuildingsToggle: %d\n",drawBuildingsToggle);
+						break;
+            case SDLK_a:
+                drawGridToggle = !drawGridToggle;
+                printf("drawGridToggle: %d\n",drawGridToggle);
+						break;
+            case SDLK_s:
+                drawSpec2GridLinesToggle = !drawSpec2GridLinesToggle;
+                printf("drawSpec2GridLinesToggle: %d\n",drawSpec2GridLinesToggle);
+						break;
+            
+            case SDLK_5:
+                drawRoofToggle = !drawRoofToggle;
+                printf("drawSpec2GridLinesToggle: %d\n",drawRoofToggle);
+						break;
+            
 					}					
         break;
       case SDL_MOUSEBUTTONDOWN:
@@ -1054,9 +961,44 @@ int MySDLVU::MyMainLoop()
 MySDLVU sdlvu;
 
 
+int audioplayback_mode = false;
 
 int main(int argc, char *argv[])
 {
+  //omg how ugly:
+  printf("---------------------------------------------------------\n");    
+  printf("Usage:\n");
+  printf("%s soundfile\r\n\
+  \tplayback audiofile and animate\r\n\
+  %s\r\n\
+  \t capture audio and animate\r\n\
+  \r\n\
+  \r\n\
+  KEYS:\r\n\
+  \t q  toggle building\r\n\
+  \t a  toggle fft grid\r\n\
+  \t s  toggle grid to poly centroid mapping lines (slow)\r\n\
+  \t 5  toggle poly roofs\r\n\
+  \tup  resize grid, spec2grid mapping, grid2polymapping UP\r\n\
+  \tdown  resize grid, spec2grid mapping, grid2polymapping DOWN\r\n\
+  \tright  skip audio fwd\r\n\
+  \tleft skip audio bwd\r\n\
+  \r\n\
+  !!!   FOR SDLVU keys (camera movement etc) press ? when its running\r\n\
+  \r\n\
+  \t\r\n", argv[0], argv[0]);
+  printf("---------------------------------------------------------\n");    
+  printf("\n\n");
+  int key = 0;
+  char keychar;
+  int driver = 0;
+  int numdrivers = 0;
+  int count = 0;
+  
+  if(argv[1] && argc > 0) {
+    audioplayback_mode = true;
+  }
+  
   //Sound
 	FMOD_RESULT frc;
   frc = FMOD::System_Create(&fmodsystem);
@@ -1077,43 +1019,257 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  //if we are on linux, set output type to alsa
-  #ifdef __LINUX__
-  frc = fmodsystem->setOutput(FMOD_OUTPUTTYPE_ALSA);
-  if (frc != FMOD_OK) {
-    printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
-    exit(1);
-  }
+  
+  //hey... maybe FMOD_OUTPUTTYPE_AUTODETECT is good for ->setOutput()  !?
 
-  #endif
+  if(audioplayback_mode) {
+    //if we are on linux, set output type to alsa
+    #ifdef __LINUX__
+    
+    frc = fmodsystem->setOutput(FMOD_OUTPUTTYPE_ALSA);
+    if (frc != FMOD_OK) {
+      printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
+      exit(1);
+    }
+    printf("using ALSA\n");
+    
+    #endif
+  
+  
+  } else {
+    //Recording:
+    
+    /* 
+        System initialization
+    */
+    printf("---------------------------------------------------------\n");    
+    printf("Select OUTPUT type\n");    
+    printf("---------------------------------------------------------\n");   
+    printf("1 :  Core Audio (OS X)\n");
+    printf("2 :  ALSA (linux)\n");
+    printf("3 :  OSS (linux)\n");
+    printf("4 :  let fmod try the 'best output mode for the platform'\n");
+    printf("---------------------------------------------------------\n");
+    printf("Press a corresponding number or ESC to quit\n");
+//
+      do
+    {
+        //key = getch();  //fmod sample code using wincompat.h
+        //key = getchar();    //will this work on wind00ze? FIXME
+        cin >> keychar;
+    } while (keychar != 27 && keychar < '1' && keychar > '5');
+
+    switch (keychar)
+    {
+        case '1' :  result = fmodsystem->setOutput(FMOD_OUTPUTTYPE_COREAUDIO);
+                    iscoreaudio = true;
+                    //printf("coreaudio\n");
+                    break;
+        case '2' :  result = fmodsystem->setOutput(FMOD_OUTPUTTYPE_ALSA);
+                    break;
+        case '3' :  result = fmodsystem->setOutput(FMOD_OUTPUTTYPE_OSS);
+                    break;            
+        case '4' :  result = fmodsystem->setOutput(FMOD_OUTPUTTYPE_AUTODETECT);
+                    break;
+        default  :  printf("my creator was puzzled... exiting\n");
+                    exit(1);
+                    
+    }  
+    ERRCHECK(result);
+
+    /*
+        Enumerate playback devices
+    */
+
+    result = fmodsystem->getNumDrivers(&numdrivers);
+    ERRCHECK(result);
+
+    printf("---------------------------------------------------------\n");    
+    printf("Choose a PLAYBACK driver\n");
+    printf("---------------------------------------------------------\n");    
+    for (count=0; count < numdrivers; count++)
+    {
+        char name[256];
+
+        result = fmodsystem->getDriverInfo(count, name, 256, 0);
+        ERRCHECK(result);
+
+        printf("%d : %s\n", count + 1, name);
+    }
+    printf("---------------------------------------------------------\n");
+    printf("Press a corresponding number or ESC to quit\n");
+
+    do
+    {
+        //key = getchar();
+        cin >> keychar;
+        if (keychar == 27)
+        {
+            return 0;
+        }
+        driver = keychar - '1';
+    } while (driver < 0 || driver >= numdrivers);
+
+    result = fmodsystem->setDriver(driver);
+    ERRCHECK(result);
+    
+    
+    /*
+        Enumerate record devices
+    */
+
+    result = fmodsystem->getRecordNumDrivers(&numdrivers);
+    ERRCHECK(result);
+
+    printf("---------------------------------------------------------\n");    
+    printf("Choose a RECORD driver\n");
+    printf("---------------------------------------------------------\n");    
+    for (count=0; count < numdrivers; count++)
+    {
+        char name[256];
+
+        result = fmodsystem->getRecordDriverInfo(count, name, 256, 0);
+        ERRCHECK(result);
+
+        printf("%d : %s\n", count + 1, name);
+    }
+    printf("---------------------------------------------------------\n");
+    printf("Press a corresponding number or ESC to quit\n");
+
+    do
+    {
+        //key = getchar();
+        cin >> keychar;
+        if (keychar == 27)
+        {
+            return 0;
+        }
+        driver = keychar - '1';
+    } while (driver < 0 || driver >= numdrivers);
+
+    printf("\n");
+
+    result = fmodsystem->setRecordDriver(driver);
+    ERRCHECK(result);
+    
+    
+    result = fmodsystem->setSoftwareFormat(OUTPUTRATE, FMOD_SOUND_FORMAT_PCM16, 2, 0, FMOD_DSP_RESAMPLER_LINEAR);
+    ERRCHECK(result);
+
+  }//recording setup & driver selection end
+  
+  
+  //recording example: result = system->init(32, FMOD_INIT_NORMAL, 0);
   frc = fmodsystem->init(1, FMOD_INIT_NORMAL, 0);
   if (frc != FMOD_OK) {
     printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
     exit(1);
   }
 	
-  sdlvu.Init("SDLVU Basic Object Oriented Example",
-             50, 50, 800, 600);
+  
 
-  if(argv[1] && argc > 0) {
-    frc = fmodsystem->createSound(argv[1], FMOD_SOFTWARE | FMOD_2D | FMOD_CREATESTREAM, 0, &sound); 
-    if (frc != FMOD_OK) {
-      printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
-      exit(1);
+  //playback of a file or capture live audio?
+  if(audioplayback_mode) {
+    ///*
+      if(argv[1] && argc > 0) {
+        frc = fmodsystem->createSound(argv[1], FMOD_SOFTWARE | FMOD_2D | FMOD_CREATESTREAM, 0, &sound); 
+        if (frc != FMOD_OK) {
+          printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
+          exit(1);
+        }
+      } else {
+          printf("no data\n");
+          exit(1);
+      }
+
+      frc = fmodsystem->playSound(FMOD_CHANNEL_FREE, sound, false, &channel);
+      if (frc != FMOD_OK) {
+        printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
+        exit(1);
+      }
+      channel->setMute(sdlvu.muteToggle);
+    //*/
+  } else {
+    //setup audio capturing with fmod:
+    
+    /*
+          Create a sound to record to.
+    */
+    memset(&exinfo, 0, sizeof(FMOD_CREATESOUNDEXINFO));
+
+    exinfo.cbsize           = sizeof(FMOD_CREATESOUNDEXINFO);
+    exinfo.numchannels      = 1;
+    exinfo.defaultfrequency = OUTPUTRATE;
+    if (iscoreaudio)
+    {
+        exinfo.format = FMOD_SOUND_FORMAT_PCMFLOAT;
+        //exinfo.length = exinfo.defaultfrequency * sizeof(float) * exinfo.numchannels * 5;
+        exinfo.length = SPECTRUM_LENGTH;
     }
-	} else {
-			printf("no data\n");
-			exit(1);
-	}
+    else
+    {
+        exinfo.format = FMOD_SOUND_FORMAT_PCMFLOAT;
+        exinfo.length = exinfo.defaultfrequency * sizeof(short) * exinfo.numchannels * 5;
+    }
 
-  frc = fmodsystem->playSound(FMOD_CHANNEL_FREE, sound, false, &channel);
-  if (frc != FMOD_OK) {
-    printf("FMOD error! (%d) %s \n", frc, FMOD_ErrorString(frc));
-    exit(1);
+  //  result = fmodsystem->createSound(0, FMOD_2D | FMOD_SOFTWARE | FMOD_LOOP_NORMAL | FMOD_OPENUSER, &exinfo, &sound);
+    result = fmodsystem->createSound(0, FMOD_2D | FMOD_SOFTWARE | FMOD_LOOP_NORMAL | FMOD_OPENUSER, &exinfo, &sound);
+    ERRCHECK(result);
+    
+    result = fmodsystem->recordStart(sound, true);
+    ERRCHECK(result);
+    
+    result = fmodsystem->playSound(FMOD_CHANNEL_FREE, sound, false, &channel);
+    ERRCHECK(result);
+    
+    /* Dont hear what is being recorded otherwise it will feedback.  Spectrum analysis is done before volume scaling in the DSP chain */
+    result = channel->setVolume(0);
+    ERRCHECK(result);
+    
+    //RECORD END
+  
   }
+  //sound play||record end
+  
+  
+  Uint32 myuserflags = SDL_OPENGL;
+  int windowX, windowY;
+  printf("---------------------------------------------------------\n");    
+  printf("Select videomode \n");    
+  printf("---------------------------------------------------------\n");   
+  printf("1 :  800x600 fullscreen\n");
+  printf("2 :  800x600 window\n");
+  printf("3 :  1280x800 fullscreen\n");
+  printf("4 :  1280x800  window\n");
+  printf("---------------------------------------------------------\n");
+  printf("Press a corresponding number or ESC to quit\n");
 
-  channel->setMute(sdlvu.muteToggle);
+  do
+  {
+      //key = getch();  //fmod sample code using wincompat.h
+      cin >> keychar;
+      
+  } while (keychar != 27 && keychar < '1' && keychar > '5');
 
+  switch (keychar)
+  {
+      case '1' :  windowX = 800; windowY = 600;
+                  myuserflags |= SDL_FULLSCREEN;
+                  break;
+      case '2' :  windowX = 800; windowY = 600;
+                  break;
+      case '3' :  windowX = 1280; windowY = 800;
+                  myuserflags |= SDL_FULLSCREEN;
+                  break;
+      case '4' :  windowX = 1280; windowY = 800;
+                  break;
+      
+      default :   exit(1);
+                  windowX = 1280; windowY = 800;
+                  myuserflags |= SDL_FULLSCREEN;
+  }
+  sdlvu.Init("SDLVU Basic Object Oriented Example",
+             50, 50, windowX, windowY, myuserflags);
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
   glEnable(GL_COLOR_MATERIAL);
@@ -1161,3 +1317,5 @@ LookAtCntr: (3.812, -10.799, 53.023)
        Far: 299.999725
 
 */
+
+/////

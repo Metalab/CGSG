@@ -128,8 +128,10 @@ const PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
   
   //find polygons
   CvSeq *contours, *polys;
+  //cvFindContours(tempBinarizedImage, cvMemStorage, &contours, sizeof(CvContour),
+  //                CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
   cvFindContours(tempBinarizedImage, cvMemStorage, &contours, sizeof(CvContour),
-                  CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+                  CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
   polys = cvApproxPoly(contours, sizeof(CvContour), cvMemStorage, CV_POLY_APPROX_DP, 1, 1);
 
   //create MapFragment
@@ -264,7 +266,7 @@ IplImage* ViennaMap::getImage(int x, int y) {
     //TODO: get from web!!
     if (x != 0 || y != 0) return NULL;
 
-    return cvLoadImage("../../metalabumgebungbig.png", 3);
+    return cvLoadImage("../../illbeBACH.png", 3);
 }
 
 void tryCompletePolygons(int x, int y) {

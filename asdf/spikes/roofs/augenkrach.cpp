@@ -228,7 +228,12 @@ MySDLVU::MySDLVU():map(imageDIR) {
 }
 
 void MySDLVU::loadNextImage(int next) {
-  currentImage += next;
+//  printf("PNGfileList size:%d\n\n",this->map.PNGfileList.size());
+//  currentImage += currentImage + next < this->map.PNGfileList.size()-1 ? next : 0;
+  
+  if(currentImage + next < this->map.PNGfileList.size() && currentImage + next > -1) {
+    currentImage += next;
+  }
   printf("currImg: %d\n", currentImage);
 
   polygons = &map.getPolygonsOfFragment(currentImage,0);
@@ -292,9 +297,11 @@ void MySDLVU::DrawBuildingByRasterSpectrum(Building &building, float height) {
 
 		//farbe "unten":
     glColor3f(0,0,0);
-
-    glVertex3f((*poly)[n].x, -(*poly)[n].y, 0.);
-    glVertex3f((*poly)[i].x, -(*poly)[i].y, 0.);
+    
+    glVertex3f((*poly)[n].x, -(*poly)[n].y, (specVar*100));
+    glVertex3f((*poly)[i].x, -(*poly)[i].y, (specVar*100));
+//    glVertex3f((*poly)[n].x, -(*poly)[n].y, 0.);
+//    glVertex3f((*poly)[i].x, -(*poly)[i].y, 0.);
 
   }
 
@@ -681,6 +688,9 @@ void MySDLVU::DrawCentroid(Building &building, float height) {
   /*
   FIXME   why do i have to invert the coords here? in drawpoly its +x, -y  here i have to do -x, +y  to make it look(!) correct. maybe computation in map.cpp is still wrong
   */
+  if(-building.fCenterX < 0) {
+    glColor3f(0.,  1,  0.8);
+  }  
   glVertex3f( -building.fCenterX, building.fCenterY, 0);
   glVertex3f( -building.fCenterX, building.fCenterY, 200);
 
@@ -844,11 +854,11 @@ void MySDLVU::Display()
     DrawFFTGrid(raster_x, raster_y,0);
 
 	for (;build != buildend; build++) {
-      //DrawCentroid(**build, 100);
+      //DrawCentroid(**build, 100); //slow debug func
       //DrawMeanCenter(**build, 100);
 
       if(drawSpec2GridLinesToggle)
-        DrawCentroid2GridLines(**build, 0, -200, raster_x, raster_y);
+        DrawCentroid2GridLines(**build, 0, 0, raster_x, raster_y);
       if(drawBuildingsToggle)
         DrawBuildingByRasterSpectrum(**build, 50);
       p++;

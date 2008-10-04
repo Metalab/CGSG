@@ -179,7 +179,7 @@ BuildingList& ViennaMap::getBuildingsOfFragment(int x, int y) {
 }
 
 const PolygonList& ViennaMap::getPolygonsOfFragment(int x, int y) {
-  printf("imgNum: %d\n",x);
+//  printf("imgNum: %d\n",x);
   MapFragment* frag = getMapFragment(x, y);
   
   if (frag != NULL) return frag->polygons;
@@ -215,7 +215,19 @@ const PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
   cvFindContours(tempBinarizedImage, cvMemStorage, &contours, sizeof(CvContour),
                   CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
   polys = cvApproxPoly(contours, sizeof(CvContour), cvMemStorage, CV_POLY_APPROX_DP, 1, 1);
-
+  /*
+  retrieval mode:
+    * CV_RETR_EXTERNALretrives only the extreme outer contours
+    * CV_RETR_LISTretrieves all the contours and puts them in the list
+    * CV_RETR_CCOMPretrieves all the contours and organizes them into two-level hierarchy: top level are external boundaries of the components, second level are bounda boundaries of the holes
+    * CV_RETR_TREEretrieves all the contours and reconstructs the full hierarchy of nested contours 
+  Approximation method.
+    * CV_CHAIN_CODEoutputs contours in the Freeman chain code. All other methods output polygons (sequences of vertices).
+    * CV_CHAIN_APPROX_NONEtranslates all the points from the chain code into points;
+    * CV_CHAIN_APPROX_SIMPLEcompresses horizontal, vertical, and diagonal segments, that is, the function leaves only their ending points;
+    * CV_CHAIN_APPROX_TC89_L1,
+    * CV_CHAIN_APPROX_TC89_KCOS applies one of the flavors of Teh-Chin chain approximation algorithm. CV_LINK_RUNS uses completely different (from the previous methods) algorithm - linking of horizontal segments of 1's. Only CV_RETR_LIST retrieval mode is allowed by the method. 
+  */
   //create MapFragment
   MapFragment *frag = new MapFragment();
   (*frag).x = fragX;
@@ -311,10 +323,28 @@ const PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
       tmpResulty += ( (double)(*bpoly)[i].y + (double)(*bpoly)[p].y ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
     }
 
-    (*building).dCenterX = ( 1 / (A * 6)) * tmpResultx;
-    (*building).dCenterY = ( 1 / (A * 6)) * tmpResulty;
-    (*building).fCenterX = ( 1 / (A * 6)) * tmpResultx;
-    (*building).fCenterY = ( 1 / (A * 6)) * tmpResulty;
+    (*building).dCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
+    (*building).dCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+    (*building).fCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
+    (*building).fCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+    
+    //if((*building).fCenterY < 0 )
+    //  (*building).fCenterY *= -1;
+    
+//    printf("centerX:%f\n",(*building).fCenterX);
+
+//FIXME
+//i have no idea why, but to get centroids for polys inside other polys right, i have to mangle the centroid...
+// otherwise it would have inverted x,y coords 
+//carmack come save me
+    if((*building).fCenterY > 0) {
+      (*building).dCenterY *= -1.;
+      (*building).fCenterY *= -1.;
+    }
+    if((*building).fCenterX > 0) {
+      (*building).dCenterX *= -1.;
+      (*building).fCenterX *= -1.;
+    }
     
     if (!incomplete) {
       frag->polygons.push_back(polygon);

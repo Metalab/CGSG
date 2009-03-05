@@ -1,0 +1,60 @@
+/*
+
+load/trace all imgs from directory via opencv  (one 3200x3200 img per scene)
+put each in separate vertex/normal/color array
+
+
+moveable & resizeable FFT grid!!!
+switch vertexarrays on keypress
+
+ESC 					= quit
+arrow left		= load next image (leaks a little memory)
+arrow right		= load prev image (leaks a little memory)
+arrow up			= adjust fft grid alignment (see console output "specdivisor: 1, x:64 y:64")
+arrow down		= adjust fft grid alignment (see console output "specdivisor: 1, x:64 y:64")
+ctrl + up			= increase fft grid size (*2)    max fft grid size = 64x64!!!
+ctrl + down		= decrease fft grid size (/2)		 max fft grid size = 64x64!!!
+shift + up		= increase fft spectrum vars per polygon		(see console: polysearchdistance: 500.000000)
+shift + down	= decrease fft spectrum vars per polygon		(see console: polysearchdistance: 500.000000)
+
+shift+ctrl+up	= increase volume needed for cam change by 0.01  (see console: CAM_SWITCH_VOLUME: 0.039)
+shift+ctrl+down	= decrease volume needed for cam change by 0.01
+
+1,2,3,4				= select cam x
+x							= switch to camera "drive" mode
+c							= switch to camera "drag" mode
+h							= switch to camera "rotate" mode
+
+u							= mute / halt animation
+y							= toggle auto cam switch mode on spectrum (bass hits certain volume)
+5							= toggle draw Roofs
+q							= toggle draw polygons
+a							= toggle draw fft grid
+shift + a			= toggle draw fft grid to polygon center lines (slow but also neat)
+i							= toggle inertia navigation for camera movement(default off! )
+
+-------
+walkthrough:
+start it
+press "1"
+	adjust your cam with x, c, h & mouse
+press "2"
+	adjust cam 2 with x, c, h & mouse
+... etc for cam 3 & 4
+
+toggle stuff u want to draw (fft grid/ polygons)
+
+
+//(cam movement via midiMsg)
+
+
+
+data structure:
+
+img
+	list of polys
+		poly
+			list of points
+	
+*/
+

@@ -12,8 +12,8 @@
 
 class AnimateableObject {
 	public:
-		AnimateableObject();
-		virtual ~AnimateableObject() {};
+		AnimateableObject() {}
+		virtual ~AnimateableObject() { }
 
 		AnimateableObject(int startTick, int duration) {
 			this->startTick = startTick; this->duration = duration;

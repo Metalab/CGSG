@@ -46,19 +46,23 @@ void TimelineReader::Open(const std::string &filename) {
 AnimateableObject* TimelineReader::ParseObject() {
 	std::string line;
 
-	if (inputStream.eof()) return 0;
-
-	getline(inputStream, line);
-
-	if (inputStream.fail())
-		throw TimelineParseException();
-
 	//parse the line and create the appropriate AnimatableObject
-	std::stringstream s(line);
+	std::stringstream s;
 	std::string name;
-	int start, duration;
 
-	s >> name;
+	do {
+		if (inputStream.eof()) return 0;
+
+		getline(inputStream, line);
+
+		if (inputStream.fail())
+			throw TimelineParseException();
+		s.str(line);
+		s.seekg(0, std::ios::beg);
+		s >> name;
+
+	} while(  name.length() == 0 || name[0] == '#' );
+	int start, duration;
 	s >> start;
 	s >> duration;
 

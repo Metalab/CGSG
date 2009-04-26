@@ -16,6 +16,7 @@ class Context {
 		~Context();
 
 		AudioStuff* getAudio() { return audioStuff; }
+		void update();
 
 	private:
 		AudioStuff* audioStuff;

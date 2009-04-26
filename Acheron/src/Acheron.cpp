@@ -41,6 +41,7 @@ GLfloat rotation[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 #include "TimelineReader.h"
 
 #include "TextItemParser.h"
+#include "effects/RingParser.h"
 
 #include "Context.h"
 
@@ -56,7 +57,7 @@ void resizeGL(int w, int h)
   glViewport(0, 0, w, h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(45.0f, 1.0f*w/h, 0.1f, 1000.0f);
+  gluPerspective(110.0f, 1.0f*w/h, 0.1f, 1000.0f);
 }
 
 void initGL(int w, int h)
@@ -139,7 +140,7 @@ int main( int argc, char ** argv ) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisample);
 	}
 
-	int width = 640, height = 480;
+	int width = 1280, height = 1024;
 	Uint32 flags = SDL_OPENGL;
 	if (fullscreen) {
 		const SDL_VideoInfo *info = SDL_GetVideoInfo();
@@ -170,6 +171,7 @@ int main( int argc, char ** argv ) {
 	//initialize the timeline reader
 	timelineReader = new TimelineReader();
 	timelineReader->SetParser("TEXT", new TextItemParser(new Font("arialbd.ttf", 14)));
+	timelineReader->SetParser( "MULTIKA_RING", new multiKa::RingParser() );
 	timelineReader->Open("timeline.txt");
 
 	chronos = new Chronos();
@@ -196,7 +198,31 @@ int main( int argc, char ** argv ) {
 		glTranslatef(0, 0, -5.0);
 		glRotatef(rotation[0], rotation[1], rotation[2], rotation[3]);
 		glColor3f(1,0,0);
+
+		context->update();
+
 		chronos->Draw(now);
+
+		glPushMatrix();
+		glBegin(GL_LINES);
+		glColor4f(0.0,0.0,0.0,0.5);
+		glVertex3f(-20.0,0.0,0.0);
+		glColor4f(1.0,0.0,0.0,1.0);
+		glVertex3f(20.0,0.0,0.0);
+		glEnd();
+		glBegin(GL_LINES);
+		glColor4f(0.0,0.0,0.0,0.5);
+		glVertex3f(0,-20,0);
+		glColor4f(0.0,1.0,0.0,1.0);
+		glVertex3f(0,20,0);
+		glEnd();
+		glBegin(GL_LINES);
+		glColor4f(0.0,0.0,0.0,0.5);
+		glVertex3f(0,0,-20);
+		glColor4f(0.0,0.0,1.0,1.0);
+		glVertex3f(0,0,20);
+		glEnd();
+		glPopMatrix();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {
@@ -240,6 +266,7 @@ int main( int argc, char ** argv ) {
 
 	delete timelineReader;
 	delete chronos;
+	delete context;
 
 	SDL_Quit();
 

@@ -14,3 +14,7 @@ Context::Context() {
 Context::~Context() {
 	delete audioStuff;
 }
+
+void Context::update() {
+	audioStuff->refreshSpectrum();
+}

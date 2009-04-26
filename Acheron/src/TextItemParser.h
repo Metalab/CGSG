@@ -17,9 +17,7 @@
 
 class TextItemParser: public TimelineItemParser {
 	public:
-		TextItemParser();
 		TextItemParser(Font *font) { this->font = font; }
-		//virtual ~TextItemParser();
 		virtual AnimateableObject* ReadObject(int startTicksAbsolute, int duration, std::stringstream &params);
 		virtual ~TextItemParser() { delete font; }
 

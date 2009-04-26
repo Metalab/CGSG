@@ -34,16 +34,17 @@ GLfloat rotation[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 #include "AnimateableObject.h"
 #include "LinearInterpolatedAnimateable.h"
 
-//#include "anim.h"
 #include "Chronos.h"
 
-//#include "timeline.h"
 #include "TimelineParseException.h"
 #include "TimelineItemParser.h"
 #include "TimelineReader.h"
 
-//#include "parsers.h"
 #include "TextItemParser.h"
+
+#include "Context.h"
+
+Context *context;
 
 Chronos *chronos;
 TimelineReader *timelineReader;
@@ -172,6 +173,9 @@ int main( int argc, char ** argv ) {
 	timelineReader->Open("timeline.txt");
 
 	chronos = new Chronos();
+
+	context = new Context();
+	chronos->setContext( context );
 
 	AnimateableObject *obj;
 	bool done = false;

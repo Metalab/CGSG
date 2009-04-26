@@ -8,6 +8,8 @@
 #ifndef ANIMATEABLEOBJECT_H_
 #define ANIMATEABLEOBJECT_H_
 
+#include "Context.h"
+
 class AnimateableObject {
 	public:
 		AnimateableObject();
@@ -16,7 +18,7 @@ class AnimateableObject {
 		AnimateableObject(int startTick, int duration) {
 			this->startTick = startTick; this->duration = duration;
 		}
-		virtual bool Draw(int ticks) = 0;
+		virtual bool Draw(int ticks, Context* context) = 0;
 
 		int GetStartTick() { return startTick; }
 		int GetDuration() { return duration; }

@@ -17,15 +17,6 @@
 
 using namespace std;
 
-//TextItemParser::TextItemParser() {
-//	// TODO Auto-generated constructor stub
-//
-//}
-//
-//TextItemParser::~TextItemParser() {
-//	// TODO Auto-generated destructor stub
-//}
-
 AnimateableObject* TextItemParser::ReadObject(int startTicksAbsolute, int duration, stringstream &params) {
 	string text;
 

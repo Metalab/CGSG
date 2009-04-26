@@ -7,15 +7,8 @@
 
 #include "Chronos.h"
 
-Chronos::Chronos() : objects() {
-	// TODO Auto-generated constructor stub
-
-}
-
-Chronos::~Chronos() {
-	// TODO Auto-generated destructor stub
-}
-
+//Chronos::Chronos() : objects() {
+//}
 
 void Chronos::AddObject (AnimateableObject *object)
 {
@@ -27,7 +20,7 @@ void Chronos::Draw(int tick) {
 	std::list<AnimateableObject*>::iterator end = objects.end();
 	while (iter != end) {
 		AnimateableObject *current = (*iter);
-		bool keep = current->Draw(tick);
+		bool keep = current->Draw( tick, context );
 		if (!keep) {
 			std::list<AnimateableObject*>::iterator old = iter;
 			iter++;

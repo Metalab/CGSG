@@ -12,8 +12,6 @@
 
 class LinearInterpolatedAnimateable : public AnimateableObject {
 	public:
-		//LinearInterpolatedAnimateable();
-		//virtual ~LinearInterpolatedAnimateable();
 		virtual bool Draw(int tick, Context* context) {
 			if (tick >= startTick+duration) return false;
 			if (tick < startTick) return true;

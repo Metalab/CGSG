@@ -26,6 +26,8 @@
 #include "../AnimateableObject.h"
 #include "../Context.h"
 
+#include "iostream.h"
+
 using namespace std;
 
 namespace multiKa {
@@ -41,7 +43,12 @@ namespace multiKa {
 		list<Base3DObject *> myObjects;
 
 	public:
-		ObjectContainer() {}
+		ObjectContainer(int startTicks, int duration)
+			:AnimateableObject(startTicks, duration)
+		{
+			objectCounter=0;
+
+		}
 		virtual ~ObjectContainer(){}
 
 //		void setAudio(AudioStuff *audio);

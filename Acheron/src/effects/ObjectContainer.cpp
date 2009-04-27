@@ -13,17 +13,14 @@ using namespace multiKa;
 bool ObjectContainer::Draw( int ticks, Context* context ){
 
 	glPushMatrix();
-
-//	spectrumPointer = context->getLogSpectrum( &spectrumSize );
+glTranslatef(0,0,-20);
 	spectrumPointer = context->getAudio()->getLogSpectrum( &spectrumSize );
 
 	int startSpectrum = 0;
 	int endSpectrum = startSpectrum + spectrumPerObject;
 
 	list<Base3DObject*>::iterator i;
-cout << " vorm for-loop ";
 	for( i=myObjects.begin(); i!=myObjects.end(); i++ ){
-cout << "objCont->draw\n";
 		(*i)->draw(spectrumPointer, startSpectrum, endSpectrum);
 
 		startSpectrum += spectrumPerObject;
@@ -33,7 +30,5 @@ cout << "objCont->draw\n";
 
 	glPopMatrix();
 
-
 	return ticks < startTick+duration;
-
 }

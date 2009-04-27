@@ -35,7 +35,8 @@ Ring::Ring( float radius, float width, int segments, float rSpeed, float rDiff )
 
 	this->colors = new HSBColors(6);
 
-	cout << "foo";
+	this->createVertices();
+
 }
 
 void Ring::createVertices(){
@@ -53,7 +54,6 @@ void Ring::createVertices(){
 
 void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 	colors->update();
-//##	if( SDL_GetTicks() > startTick && SDL_GetTicks() < endTick ){
 
 	float specPerSegment = (spectrumEnd-spectrumStart)/(float)segments;
 	float spectrumPart[segments];
@@ -132,5 +132,4 @@ void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 	glEnd();
 	glRotatef(rDiff,0,0,1);
 
-//##	}
 }

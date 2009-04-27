@@ -2,8 +2,8 @@
 // Name        : Acheron.cpp
 // Author      :
 // Version     :
-// Copyright   : copyleft ftw
-// Description : Hello World in C++, Ansi-style
+// Copyright   :
+// Description :
 //============================================================================
 
 #include <iostream>
@@ -53,49 +53,51 @@ TimelineReader *timelineReader;
 
 void resizeGL(int w, int h)
 {
-  //  SDL_SetVideoMode(w, h, 16, SDL_OPENGL | SDL_RESIZABLE);
-  glViewport(0, 0, w, h);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluPerspective(110.0f, 1.0f*w/h, 0.1f, 1000.0f);
+	//  SDL_SetVideoMode(w, h, 16, SDL_OPENGL | SDL_RESIZABLE);
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(110.0f, 1.0f*w/h, 0.1f, 1000.0f);
 }
 
 void initGL(int w, int h)
 {
-  glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-  glClearDepth(1.0f);
-  glDepthFunc(GL_LESS);
-  glEnable(GL_DEPTH_TEST);
+	glClearDepth(1.0f);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_DEPTH_TEST);
 
-  glShadeModel(GL_SMOOTH);
-  glCullFace(GL_BACK);
-  glEnable(GL_CULL_FACE);
-  glFrontFace(GL_CCW);
+	glShadeModel(GL_SMOOTH);
+	glCullFace(GL_BACK);
+	glEnable(GL_CULL_FACE);
+	glFrontFace(GL_CCW);
 
-  glEnable(GL_LIGHTING);
-  glEnable(GL_LIGHT0);
-  GLfloat lightpos[] = { 15.0f, 10.0f, 10.0f, 1.0f };
-  glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
-  GLfloat mat_specular[] = { 0.1f, 0.8f, 0.4f, 1.0f };
-  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-  GLfloat mat_ambient[] = { 0.0f, 0.3f, 0.0f, 1.0f };
-  glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-  GLfloat mat_diffuse[] = { 0.8f, 0.2f, 0.0f, 1.0f };
-  glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-  glMaterialf(GL_FRONT, GL_SHININESS, 30.0f);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	GLfloat lightpos[] = { 15.0f, 10.0f, 10.0f, 1.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
 
-  resizeGL(w,h);
+//	GLfloat mat_specular[] = { 0.1f, 0.8f, 0.4f, 1.0f };
+//	GLfloat mat_ambient[] = { 0.0f, 0.3f, 0.0f, 1.0f };
+//	GLfloat mat_diffuse[] = { 0.8f, 0.2f, 0.0f, 1.0f };
+
+//	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+//	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+//	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+//	glMaterialf(GL_FRONT, GL_SHININESS, 30.0f);
+
+	resizeGL(w,h);
 }
 
 void printUsage(char *name)
 {
-  fprintf(stderr, "Usage: %s [options]\n\n", name);
-  fprintf(stderr, "Options:\n");
-  fprintf(stderr, "  -f              Run in fullscreen mode\n");
-  fprintf(stderr, "  -m <samples=4>  Enable multisample\n");
-  fprintf(stderr, "  -lm             Write LED matrix frames to stdout\n");
-  exit(1);
+	fprintf(stderr, "Usage: %s [options]\n\n", name);
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "  -f              Run in fullscreen mode\n");
+	fprintf(stderr, "  -m <samples=4>  Enable multisample\n");
+	fprintf(stderr, "  -lm             Write LED matrix frames to stdout\n");
+	exit(1);
 }
 
 
@@ -171,7 +173,7 @@ int main( int argc, char ** argv ) {
 	//initialize the timeline reader
 	timelineReader = new TimelineReader();
 	timelineReader->SetParser("TEXT", new TextItemParser(new Font("arialbd.ttf", 14)));
-	timelineReader->SetParser( "MULTIKA_RING", new multiKa::RingParser() );
+	timelineReader->SetParser( "MULTIKA", new multiKa::RingParser() );
 	timelineReader->Open("timeline.txt");
 
 	chronos = new Chronos();

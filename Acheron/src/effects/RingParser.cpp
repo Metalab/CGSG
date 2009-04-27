@@ -18,15 +18,14 @@ AnimateableObject* RingParser::ReadObject(int startTickAbsolute, int duration, s
 	int ringSegments;
 	float ringAngle;
 
-	ObjectContainer ringContainer;
+	ObjectContainer *ringContainer = new ObjectContainer(startTickAbsolute, duration);
 
 	additionalParameters >> ringCount >> ringSegments >> ringAngle ;
 
 	for( int i=0; i<ringCount; i++ ) {
-		ringContainer.addObject( new Ring(5, 4, ringSegments, 5, ringAngle) );
-cout << "bar";
+		ringContainer->addObject( new Ring(5, 1, ringSegments, 0.5, ringAngle) );
 	}
-	ringContainer.prepareAudio();
+	ringContainer->prepareAudio();
 
-	return 0;
+	return ringContainer;
 }

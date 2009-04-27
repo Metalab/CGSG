@@ -12,7 +12,6 @@
 
 class AnimateableObject {
 	public:
-		AnimateableObject() {}
 		virtual ~AnimateableObject() { }
 
 		AnimateableObject(int startTick, int duration) {

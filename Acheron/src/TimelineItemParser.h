@@ -21,7 +21,7 @@ class TimelineItemParser {
 	public:
 		virtual ~TimelineItemParser() {}
 
-		virtual AnimateableObject* ReadObject(int startTickAbsolute, int duration, std::stringstream &additionalParameters) = 0;
+		virtual AnimateableObject* ReadObject( int startTickAbsolute, int duration, std::stringstream &additionalParameters) = 0;
 
 };
 

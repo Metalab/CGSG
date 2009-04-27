@@ -1,2 +1,4 @@
 TEXT 1000 10000 30 10 -70 -530 10 -70 Hallo Metalab!
+# fookemememememememeem
+MULTIKA 1000 100000 3 50 45 
 TEXT 4000 10000 30 10 -40 -530 10 -190 Yay, we can haz text.

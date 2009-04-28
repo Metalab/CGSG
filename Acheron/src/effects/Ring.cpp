@@ -87,12 +87,14 @@ void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 	}
 
 	// define material
-	GLfloat mat_shininess[] = {100.0};
+	GLfloat mat_shininess[] = {50.0};
 
 	glMaterialfv (GL_FRONT, GL_SHININESS, mat_shininess);
 	colors->setMaterial(GL_FRONT, GL_AMBIENT);
 	colors->setMaterial(GL_FRONT, GL_DIFFUSE);
 	colors->setMaterial(GL_FRONT, GL_SPECULAR);
+
+	glEnable(GL_NORMALIZE);
 
 	glBegin(GL_TRIANGLE_STRIP);
 

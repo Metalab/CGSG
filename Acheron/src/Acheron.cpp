@@ -78,14 +78,17 @@ void initGL(int w, int h)
 	GLfloat lightpos[] = { 15.0f, 10.0f, 10.0f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightpos);
 
-//	GLfloat mat_specular[] = { 0.1f, 0.8f, 0.4f, 1.0f };
-//	GLfloat mat_ambient[] = { 0.0f, 0.3f, 0.0f, 1.0f };
-//	GLfloat mat_diffuse[] = { 0.8f, 0.2f, 0.0f, 1.0f };
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 
-//	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-//	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-//	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-//	glMaterialf(GL_FRONT, GL_SHININESS, 30.0f);
+
+	GLfloat mat_specular[] = { 0.1f, 0.8f, 0.4f, 1.0f };
+	GLfloat mat_ambient[] = { 0.0f, 0.3f, 0.0f, 1.0f };
+	GLfloat mat_diffuse[] = { 0.8f, 0.2f, 0.0f, 1.0f };
+
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+	glMaterialf(GL_FRONT, GL_SHININESS, 30.0f);
 
 	resizeGL(w,h);
 }
@@ -206,24 +209,45 @@ int main( int argc, char ** argv ) {
 		chronos->Draw(now);
 
 		glPushMatrix();
+		//glLoadIdentity();
+
+		float mat_shininess[] = { 100.0 };
+		glMaterialfv (GL_FRONT, GL_SHININESS, mat_shininess);
+
+		float mat_ambient_diffuse[] = { 1.0, 0.0, 0.0 };
+		float mat_specular[] = { 1.0, 0.0, 0.0 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+
 		glBegin(GL_LINES);
 		glColor4f(0.0,0.0,0.0,0.5);
 		glVertex3f(-20.0,0.0,0.0);
 		glColor4f(1.0,0.0,0.0,1.0);
 		glVertex3f(20.0,0.0,0.0);
 		glEnd();
+
+		float mat_ambient_diffuse2[] = { 0.0, 1.0, 0.0 };
+		float mat_specular2[] = { 0.0, 1.0, 0.0 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse2);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
 		glBegin(GL_LINES);
 		glColor4f(0.0,0.0,0.0,0.5);
 		glVertex3f(0,-20,0);
 		glColor4f(0.0,1.0,0.0,1.0);
 		glVertex3f(0,20,0);
 		glEnd();
+
+		float mat_ambient_diffuse3[] = { 0.0, 0.0, 1.0 };
+		float mat_specular3[] = { 0.0, 0.0, 1.0 };
+		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse3);
+		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular3);
 		glBegin(GL_LINES);
 		glColor4f(0.0,0.0,0.0,0.5);
 		glVertex3f(0,0,-20);
 		glColor4f(0.0,0.0,1.0,1.0);
 		glVertex3f(0,0,20);
 		glEnd();
+
 		glPopMatrix();
 
 		SDL_Event event;

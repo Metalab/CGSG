@@ -25,7 +25,7 @@ class Text: public LinearInterpolatedAnimateable {
 		void DrawCube(float x, float y, float z);
 
 	public:
-		virtual ~Text();
+		//virtual ~Text();
 
 		Text(Font &theFont, const char *text, float *startPos, float *endPos, int startTick, int duration);
 

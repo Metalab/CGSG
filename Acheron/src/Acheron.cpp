@@ -20,7 +20,6 @@
 #endif
 #include <SDL.h>
 
-
 using namespace std;
 
 // Shader utils
@@ -31,6 +30,7 @@ using namespace std;
 GLfloat rotation[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 
 #include "font.h"
+
 #include "AnimateableObject.h"
 #include "LinearInterpolatedAnimateable.h"
 
@@ -42,6 +42,7 @@ GLfloat rotation[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 
 #include "TextItemParser.h"
 #include "effects/RingParser.h"
+#include "effects/PhotoParser.h"
 
 #include "Context.h"
 
@@ -175,8 +176,11 @@ int main( int argc, char ** argv ) {
 
 	//initialize the timeline reader
 	timelineReader = new TimelineReader();
-	timelineReader->SetParser("TEXT", new TextItemParser(new Font("arialbd.ttf", 14)));
-	timelineReader->SetParser( "MULTIKA", new multiKa::RingParser() );
+
+	timelineReader->SetParser( "TEXT", 	new TextItemParser(new Font("arialbd.ttf", 14)));
+	timelineReader->SetParser( "RING", 	new multiKa::RingParser() );
+	timelineReader->SetParser( "PHOTO", new multiKa::PhotoParser() );
+
 	timelineReader->Open("timeline.txt");
 
 	chronos = new Chronos();

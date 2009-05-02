@@ -12,7 +12,8 @@
 
 using namespace multiKa;
 
-AnimateableObject* RingParser::ReadObject(int startTickAbsolute, int duration, std::stringstream &additionalParameters) {
+AnimateableObject* RingParser::ReadObject(int startTickAbsolute, int duration,
+											std::stringstream &additionalParameters) {
 
 	int ringCount;
 	int ringSegments;
@@ -23,7 +24,7 @@ AnimateableObject* RingParser::ReadObject(int startTickAbsolute, int duration, s
 	additionalParameters >> ringCount >> ringSegments >> ringAngle ;
 
 	for( int i=0; i<ringCount; i++ ) {
-		ringContainer->addObject( new Ring(5, 1, ringSegments, 0.5, ringAngle) );
+		ringContainer->addObject( new Ring(5-i*0.3, 0.5, ringSegments, 0.5, ringAngle) );
 	}
 	ringContainer->prepareAudio();
 

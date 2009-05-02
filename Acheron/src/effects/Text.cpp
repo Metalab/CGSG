@@ -17,9 +17,9 @@
   #include <GL/glu.h>
 #endif
 
-Text::~Text() {
-	// TODO Auto-generated destructor stub
-}
+//Text::~Text() {
+//	// TODO Auto-generated destructor stub
+//}
 
 Text::Text(Font &theFont, const char *text, float *startPos, float *endPos, int startTick, int duration)
 	:LinearInterpolatedAnimateable(startPos, endPos, startTick, duration), points()

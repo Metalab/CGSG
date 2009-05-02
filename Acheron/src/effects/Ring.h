@@ -15,8 +15,7 @@ namespace multiKa {
 
 	class Ring: public Base3DObject {
 		public:
-			Ring( float radius, float width, int segments,
-					float rSpeed, float rDiff );
+			Ring( float radius, float width, int segments, float rSpeed, float rDiff );
 
 			virtual void draw( float spectrum[], int startSpectrum, int endSpectrum );
 

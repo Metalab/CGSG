@@ -1,4 +1,11 @@
 TEXT 1000 10000 30 10 -70 -530 10 -70 Hallo Metalab!
 # fookemememememememeem
-MULTIKA 1000 100000 3 50 45 
+PHOTO 100 100000 10 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+PHOTO 200 100000 15 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+PHOTO 400 100000 20 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+PHOTO 800 100000 25 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+PHOTO 1600 100000 30 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+PHOTO 3200 100000 35 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+PHOTO 6400 100000 40 5 -35 -600 5 -35  batou_cos_funwithreprappartz.jpeg
+RING 1000 100000 5 50 45 
 TEXT 4000 10000 30 10 -40 -530 10 -190 Yay, we can haz text.

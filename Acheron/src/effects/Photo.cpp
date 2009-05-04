@@ -23,8 +23,6 @@ Photo::Photo( float* startPos, float* endPos, const char* photoFilename, int sta
 	: LinearInterpolatedAnimateable( startPos, endPos, startTick, duration )
 {
 	this->photoFilename = photoFilename;
-	std::cout << "PHOTO constr" << std::endl;
-
 }
 
 void Photo::DrawAtPosition( float* position, float factor, int tick ) {

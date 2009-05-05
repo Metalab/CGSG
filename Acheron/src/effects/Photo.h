@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "../LinearInterpolatedAnimateable.h"
+#include "../Texture.h"
 
 namespace multiKa {
 
@@ -19,6 +20,13 @@ namespace multiKa {
 
 		private:
 			const char* photoFilename;
+			Texture* photoTexture;
+
+			float v1[3], v2[3], v3[3], v4[3], v5[3], v6[3], v7[3], v8[3];
+			float vn1[3], vn2[3], vn3[3];
+			float thickness;
+
+			void createVertices();
 
 		protected:
 			virtual void DrawAtPosition( float* position, float factor, int tick );

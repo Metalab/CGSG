@@ -16,5 +16,7 @@ template<typename Tkey, typename Tvalue> struct deleteSecond : public std::unary
 	void operator() (std::pair<Tkey, Tvalue*> x) { delete x.second; }
 };
 
+void calcNV( float v1[], float v2[], float v3[], float* normalVector );
+
 
 #endif /* MISC_H_ */

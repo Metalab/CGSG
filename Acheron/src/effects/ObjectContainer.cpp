@@ -6,7 +6,7 @@
  */
 
 #include "ObjectContainer.h"
-#include "iostream.h"
+#include "iostream"
 
 using namespace multiKa;
 

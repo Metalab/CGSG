@@ -8,7 +8,7 @@
 #include "RingParser.h"
 #include "ObjectContainer.h"
 #include "Ring.h"
-#include "iostream.h"
+#include "iostream"
 
 using namespace multiKa;
 

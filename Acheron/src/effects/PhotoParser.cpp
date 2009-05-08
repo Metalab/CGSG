@@ -7,7 +7,7 @@
 
 #include "PhotoParser.h"
 #include "Photo.h"
-#include "iostream.h"
+#include "iostream"
 
 using namespace multiKa;
 

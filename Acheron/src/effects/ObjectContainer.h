@@ -26,7 +26,7 @@
 #include "../AnimateableObject.h"
 #include "../Context.h"
 
-#include "iostream.h"
+#include "iostream"
 
 using namespace std;
 

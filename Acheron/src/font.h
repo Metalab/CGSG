@@ -5,8 +5,14 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
-#include <SDL.h>
-#include <SDL_ttf.h>
+#ifdef __APPLE__
+  #include <SDL/SDL.h>
+	#include <SDL/SDL_ttf.h>
+#else
+	#include <SDL.h>
+	#include <SDL_ttf.h>
+#endif
+
 
 using namespace std;
 

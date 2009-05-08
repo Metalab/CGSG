@@ -14,11 +14,13 @@
 #ifdef __APPLE__
   #include <OpenGL/gl.h>
   #include <OpenGL/glu.h>
+	#include <SDL/SDL.h>
 #else
   #include <GL/gl.h>
   #include <GL/glu.h>
+	#include <SDL.h>
 #endif
-#include <SDL.h>
+
 
 using namespace std;
 

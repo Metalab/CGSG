@@ -24,7 +24,7 @@ AnimateableObject* RingParser::ReadObject(int startTickAbsolute, int duration,
 	additionalParameters >> ringCount >> ringSegments >> ringAngle ;
 
 	for( int i=0; i<ringCount; i++ ) {
-		ringContainer->addObject( new Ring(5-i*0.3, 0.5, ringSegments, 0.5, ringAngle) );
+		ringContainer->addObject( new Ring(5-i*0.3f, 0.5f, ringSegments, 0.5f, ringAngle) );
 	}
 	ringContainer->prepareAudio();
 

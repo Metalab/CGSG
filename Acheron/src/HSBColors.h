@@ -8,18 +8,9 @@
 #ifndef HSBCOLORS_H_
 #define HSBCOLORS_H_
 
-//#include <GL/glew.h>
-
-#ifdef __APPLE__
-  #include <OpenGL/gl.h>
-  #include <OpenGL/glu.h>
-#else
-  #include <GL/gl.h>
-  #include <GL/glu.h>
-#endif
-
-//#include <sdlvu.h>
-#include "math.h"
+#include <GL/glew.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 
 struct RGBColor {

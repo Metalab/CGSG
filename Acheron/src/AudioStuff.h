@@ -10,7 +10,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "math.h"
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include "extramath.h"
+
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
 
 #include "fmod.hpp"
 #include "fmod_errors.h"

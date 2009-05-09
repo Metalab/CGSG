@@ -17,8 +17,8 @@ HSBColors::HSBColors( int num ) {
 	rgbColors = new RGBColor[numberOfColors];
 	hsbColors = new HSBColor[numberOfColors];
 
-	float start = ( rand()%36000 ) / 100.0;
-	float difference = 360.0/numberOfColors;
+	float start = ( rand()%36000 ) / 100.0f;
+	float difference = 360.0f/numberOfColors;
 
 	for( int i=0; i<numberOfColors; i++ ){
 		hsbColors[ i ].h = fmod((start + i*difference), 360);
@@ -36,7 +36,7 @@ HSBColors::~HSBColors() {
 void HSBColors::update() {
 
 	for( int i=0; i<numberOfColors; i++ ){
-		hsbColors[i].h = fmod( ( hsbColors[i].h + 0.5 ), 360);
+		hsbColors[i].h = fmod( ( hsbColors[i].h + 0.5f ), 360);
 	}
 	convertHSBColors();
 	activeColor = 0;
@@ -56,12 +56,12 @@ void HSBColors::convertHSBColors() {
 			rgbColors[i].b = hsbColors[i].b;
 		} else {
 
-			const double hf = hsbColors[i].h / 60.0;
+			const float hf = hsbColors[i].h / 60.0f;
 			const int    hi  = (int) floor( hf );
-			const double f  = hf - hi;
-			const double pv  = hsbColors[i].b * ( 1 - hsbColors[i].s );
-			const double qv  = hsbColors[i].b * ( 1 - hsbColors[i].s * f );
-			const double tv  = hsbColors[i].b * ( 1 - hsbColors[i].s * ( 1 - f ) );
+			const float f  = hf - hi;
+			const float pv  = hsbColors[i].b * ( 1 - hsbColors[i].s );
+			const float qv  = hsbColors[i].b * ( 1 - hsbColors[i].s * f );
+			const float tv  = hsbColors[i].b * ( 1 - hsbColors[i].s * ( 1 - f ) );
 			switch( hi )
 			{
 				// Red is the dominant color

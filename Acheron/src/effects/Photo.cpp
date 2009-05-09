@@ -7,15 +7,7 @@
 
 #include "Photo.h"
 
-//#include <GL/glew.h>
-
-#ifdef __APPLE__
-  #include <OpenGL/gl.h>
-  #include <OpenGL/glu.h>
-#else
-  #include <GL/gl.h>
-  #include <GL/glu.h>
-#endif
+#include <GL/glew.h>
 
 #include <iostream>
 #include "../misc.h"
@@ -29,9 +21,9 @@ Photo::Photo( float* startPos, float* endPos, const char* photoFilename, int sta
 	this->photoTexture = new  Texture( this->photoFilename );
 	this->photoTexture->load();
 
-	this->thickness = 0.1;
+	this->thickness = 0.1f;
 
-	this->rPos = 0.0;
+	this->rPos = 0.0f;
 
 	this->colors = new HSBColors(1);
 
@@ -96,8 +88,8 @@ void Photo::DrawAtPosition( float* position, float factor, int tick ) {
 	glTranslatef( position[0], position[1], position[2] );
 
 	glRotatef( rPos, 0,1,0 );
-	rPos = rPos+0.2;
-	rPos = rPos>360.0 ? rPos-360.0 : rPos;
+	rPos = rPos+0.2f;
+	rPos = rPos>360.0f ? rPos-360.0f : rPos;
 
 	GLfloat mat_shininess[] = {50.0};
 	glMaterialfv (GL_FRONT, GL_SHININESS, mat_shininess);

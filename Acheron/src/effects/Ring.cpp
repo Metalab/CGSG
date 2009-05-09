@@ -7,16 +7,10 @@
 
 #include <GL/glew.h>
 
-#ifdef __APPLE__
-  #include <OpenGL/gl.h>
-  #include <OpenGL/glu.h>
-#else
-  #include <GL/gl.h>
-  #include <GL/glu.h>
-#endif
-
 #include "Ring.h"
-#include "math.h"
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include "../extramath.h"
 #include "iostream"
 
 using namespace multiKa;
@@ -41,7 +35,7 @@ Ring::Ring( float radius, float width, int segments, float rSpeed, float rDiff )
 
 void Ring::createVertices(){
 	// calculate vertices by converting polar coordinates to carthesian
-	float phi = (2*M_PI)/segments;
+	float phi = (float)((2*M_PI)/segments);
 
 	vertices = new float[segments * 2];
 
@@ -56,14 +50,14 @@ void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 	colors->update();
 
 	float specPerSegment = (spectrumEnd-spectrumStart)/(float)segments;
-	float spectrumPart[segments];
+	float *spectrumPart = new float[segments];
 
 	float tempSum;
 
 	for( int i=0; i<segments; i++ ){
 		tempSum = 0;
-		int start = spectrumStart + round(i*specPerSegment);
-		int end =  spectrumStart + round((i+1)*specPerSegment);
+		int start = spectrumStart + (int)round(i*specPerSegment);
+		int end =  spectrumStart + (int)round((i+1)*specPerSegment);
 
 		for( int j=start; j<end; j++ ){
 			tempSum += spectrum[j];
@@ -73,7 +67,7 @@ void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 
 	}
 
-	float avgSpec= 0.0;
+	float avgSpec= 0;
 	for( int i=spectrumStart; i<spectrumEnd; i++ ){
 		avgSpec += spectrum[i];
 	}
@@ -82,8 +76,8 @@ void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 
 	glRotatef(rPos,0,1,0);
 	rPos = rPos + rSpeed*avgSpec*5;
-	if(rPos > 360.0) {
-		rPos = rPos-360.0;
+	if(rPos > 360.0f) {
+		rPos = rPos-360.0f;
 	}
 
 	// define material
@@ -134,4 +128,5 @@ void Ring::draw( float spectrum[], int spectrumStart, int spectrumEnd) {
 	glEnd();
 	glRotatef(rDiff,0,0,1);
 
+	delete [] spectrumPart;
 }

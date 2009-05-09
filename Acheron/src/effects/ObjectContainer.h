@@ -10,18 +10,11 @@
 
 #include <GL/glew.h>
 
-#ifdef __APPLE__
-  #include <OpenGL/gl.h>
-  #include <OpenGL/glu.h>
-#else
-  #include <GL/gl.h>
-  #include <GL/glu.h>
-#endif
-
 #include <list>
 
 #include "Base3DObject.h"
-#include "math.h"
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 #include "../AnimateableObject.h"
 #include "../Context.h"
@@ -59,7 +52,7 @@ namespace multiKa {
 		}
 
 		void prepareAudio() {
-			spectrumPerObject = floor((float)LOG_SPECTRUM_BANDS/objectCounter);
+			spectrumPerObject = (int)floor((float)LOG_SPECTRUM_BANDS/objectCounter);
 		};
 
 		void draw();

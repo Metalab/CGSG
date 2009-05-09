@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
+
 #ifdef __APPLE__
   #include <SDL/SDL.h>
 	#include <SDL/SDL_ttf.h>

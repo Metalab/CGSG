@@ -32,7 +32,7 @@ AudioStuff::AudioStuff() {
 		exit(-1);
 	}
 
-	result = system->createSound("kandel_maschine_sample1.ogg", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
+	result = system->createSound("07 - Röyksopp - Röyksopp's Night Out.mp3", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
 //	result = system->createSound("/home/max/Music/testSounds/kandel_maschine_sample1.ogg", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
 //	result = system->createStream("/dev/dsp", FMOD_CREATESTREAM, 0, &sound);
 	if( result != FMOD_OK ){
@@ -52,7 +52,7 @@ AudioStuff::AudioStuff() {
 		exit(-1);
 	}
 
-	logSpectrumBandwidth = log2(SPECTRUM_BANDS)/LOG_SPECTRUM_BANDS;
+	logSpectrumBandwidth = log2((float)SPECTRUM_BANDS)/LOG_SPECTRUM_BANDS;
 	tempSum=0;
 	spectrumSize = sizeof(spectrumAvg)/sizeof(float);
 	calculateConversionBoundaries();
@@ -63,8 +63,8 @@ AudioStuff::AudioStuff() {
 
 void AudioStuff::calculateConversionBoundaries() {
 	for( int j=0; j<LOG_SPECTRUM_BANDS; j++ ) {
-		conversionBoundaries[j]		= round(pow(2,  j   *logSpectrumBandwidth)-1);
-		conversionBoundaries[j+1]	= round(pow(2, (j+1)*logSpectrumBandwidth)-1);
+		conversionBoundaries[j]		= (int)round(pow(2,  j   *logSpectrumBandwidth)-1);
+		conversionBoundaries[j+1]	= (int)round(pow(2, (j+1)*logSpectrumBandwidth)-1);
 	}
 }
 
@@ -82,7 +82,7 @@ void AudioStuff::refreshSpectrum() {
 
 	tempMaxSpec = 0;
 	for( int i=0; i<SPECTRUM_BANDS; i++) {
-		spectrumAvg[i] = (spectrumLeft[i]+spectrumRight[i])/2.0;
+		spectrumAvg[i] = (spectrumLeft[i]+spectrumRight[i])/2.0f;
 		tempMaxSpec = ( spectrumAvg[i] > tempMaxSpec ? spectrumAvg[i] : tempMaxSpec );
 	}
 	tempMaxSpec = 1/tempMaxSpec;

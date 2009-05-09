@@ -6,7 +6,7 @@
  */
 
 #include "camera.h"
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 
 float radius;
@@ -20,12 +20,12 @@ int center[2] = {0, 0};
 void trackballInit(int x, int y, int w, int h)
 {
 	radius = 1.0f*(w>h?h:w);
-	center[0] = 0.5f * w;
-	center[1] = 0.5f * h;
+	center[0] = (int)(0.5f * w);
+	center[1] = (int)(0.5f * h);
 
 	// surface->center vector
-	startvec[0] = x - center[0];
-	startvec[1] = y - center[1];
+	startvec[0] = (float)(x - center[0]);
+	startvec[1] = (float)(y - center[1]);
 	float xxyy =  startvec[0] * startvec[0] + startvec[1] * startvec[1];
 	if (xxyy > radius * radius) { // outside the sphere
 		startvec[2] = 0.0f;
@@ -43,12 +43,10 @@ void trackballInit(int x, int y, int w, int h)
 */
 void trackballRotate(int x, int y, float rotvec[4])
 {
-	float cosAng, sinAng;
-	float ls, le, lr;
 	float endvec[3];
 
-	endvec[0] = x - center[0];
-	endvec[1] = y - center[1];
+	endvec[0] = (float)(x - center[0]);
+	endvec[1] = (float)(y - center[1]);
 	// surface->center vector
 	float xxyy = endvec[0] * endvec[0] + endvec[1] * endvec[1];
 	if (xxyy > radius * radius) { // outside the sphere
@@ -69,5 +67,5 @@ void trackballRotate(int x, int y, float rotvec[4])
 		endvec[2]-startvec[2]
 	};
 
-	rotvec[0] = 0.5*sqrt(tmpvec[0]*tmpvec[0] + tmpvec[1]*tmpvec[1] + tmpvec[2]*tmpvec[2]);
+	rotvec[0] = 0.5f*sqrt(tmpvec[0]*tmpvec[0] + tmpvec[1]*tmpvec[1] + tmpvec[2]*tmpvec[2]);
 }

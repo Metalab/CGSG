@@ -57,7 +57,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="sdlmain.lib sdl.lib opengl32.lib glu32.lib sdl_ttf.lib glew32.lib fmodex_vc.lib sdl_image.lib"
+				AdditionalDependencies="sdlmain.lib sdl.lib opengl32.lib glu32.lib sdl_ttf.lib glew32.lib fmodex_vc.lib sdl_image.lib cv.lib cvaux.lib highgui.lib cxcore.lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				TargetMachine="1"
@@ -127,7 +127,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="sdlmain.lib sdl.lib opengl32.lib glu32.lib sdl_ttf.lib glew32.lib fmodex_vc.lib sdl_image.lib"
+				AdditionalDependencies="sdlmain.lib sdl.lib opengl32.lib glu32.lib sdl_ttf.lib glew32.lib fmodex_vc.lib sdl_image.lib cv.lib cvaux.lib highgui.lib cxcore.lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
@@ -209,14 +209,6 @@
 				Name="effects"
 				>
 				<File
-					RelativePath=".\src\effects\Asdf.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\effects\AsdfParser.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\src\effects\ObjectContainer.cpp"
 					>
 				</File>
@@ -240,6 +232,18 @@
 					RelativePath=".\src\effects\Text.cpp"
 					>
 				</File>
+				<Filter
+					Name="Asdf"
+					>
+					<File
+						RelativePath=".\src\effects\Asdf\Asdf.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\Asdf\AsdfParser.cpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter
@@ -346,6 +350,18 @@
 					RelativePath=".\src\effects\Text.h"
 					>
 				</File>
+				<Filter
+					Name="Asdf"
+					>
+					<File
+						RelativePath=".\src\effects\Asdf\Asdf.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\Asdf\AsdfParser.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter

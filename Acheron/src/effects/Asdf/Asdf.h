@@ -15,7 +15,12 @@
 #include "../../HSBColors.h"
 
 #include <vector>
-#include <SDL/SDL_thread.h>
+#ifdef __APPLE__
+	#include <SDL/SDL_thread.h>
+#else
+	#include <SDL_thread.h>
+#endif
+
 
 // external types that we need to reference but whose size we don't need
 struct CvMemStorage;

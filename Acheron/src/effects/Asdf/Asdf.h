@@ -78,6 +78,17 @@ namespace asdfns {
       _IplImage *tempBinarizedImage;
       BuildingList buildings;
       
+      std::vector<GLfloat> tmpVertexVector;
+      std::vector<GLfloat> tmpNormalsVector;
+      std::vector<GLfloat> roofsVertexVector;
+      std::vector<GLfloat> roofsNormalsVector;
+      GLfloat *myVertexArray;
+      GLfloat *myNormalsArray;
+      GLfloat *myRoofsVertexArray;
+      GLfloat *myRoofsNormalsArray;
+      int tessMissedCounter;
+      void Asdf::CreateVertexArray();
+      void Asdf::TessellateBuilding(Building &building);
 		protected:
 			virtual void DrawAtPosition( float* position, float factor, int tick );
 

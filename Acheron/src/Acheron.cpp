@@ -42,6 +42,7 @@ GLfloat rotation[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 #include "effects/multiKa/RingParser.h"
 #include "effects/PhotoParser.h"
 #include "effects/Asdf/AsdfParser.h"
+#include "effects/zoom/zoomparser.h"
 
 #include "Context.h"
 
@@ -180,6 +181,7 @@ int main( int argc, char ** argv ) {
 	timelineReader->SetParser( "RING", 	new multiKa::RingParser() );
 	timelineReader->SetParser( "PHOTO", new multiKa::PhotoParser() );
 	timelineReader->SetParser( "ASDF", new asdfns::AsdfParser() );
+	timelineReader->SetParser( "ZOOM", new zoom::ZoomParser() );
 
 	timelineReader->Open("timeline.txt");
 

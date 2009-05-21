@@ -248,6 +248,18 @@
 						>
 					</File>
 				</Filter>
+				<Filter
+					Name="zoom"
+					>
+					<File
+						RelativePath=".\src\effects\zoom\zoom.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\zoom\zoomparser.cpp"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter
@@ -371,6 +383,18 @@
 					</File>
 					<File
 						RelativePath=".\src\effects\multiKa\Spirograph.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="zoom"
+					>
+					<File
+						RelativePath=".\src\effects\zoom\zoom.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\zoom\zoomparser.h"
 						>
 					</File>
 				</Filter>

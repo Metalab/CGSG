@@ -8,8 +8,8 @@
 #ifndef RINGPARSER_H_
 #define RINGPARSER_H_
 
-#include "../TimelineItemParser.h"
-#include "../AnimateableObject.h"
+#include "../../TimelineItemParser.h"
+#include "../../AnimateableObject.h"
 
 namespace multiKa {
 

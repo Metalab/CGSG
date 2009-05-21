@@ -10,7 +10,7 @@
 #include "Ring.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "../extramath.h"
+#include "../../extramath.h"
 #include "iostream"
 
 using namespace multiKa;

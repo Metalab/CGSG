@@ -9,7 +9,7 @@
 #define RING_H_
 
 #include "Base3DObject.h"
-#include "../HSBColors.h"
+#include "../../HSBColors.h"
 
 namespace multiKa {
 

@@ -39,7 +39,7 @@ GLfloat rotation[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 #include "TimelineReader.h"
 
 #include "TextItemParser.h"
-#include "effects/RingParser.h"
+#include "effects/multiKa/RingParser.h"
 #include "effects/PhotoParser.h"
 #include "effects/Asdf/AsdfParser.h"
 

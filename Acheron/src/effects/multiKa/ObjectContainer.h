@@ -16,8 +16,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#include "../AnimateableObject.h"
-#include "../Context.h"
+#include "../../AnimateableObject.h"
+#include "../../Context.h"
 
 #include "iostream"
 

@@ -26,10 +26,10 @@
 struct CvMemStorage;
 struct _IplImage;
 class SDL_mutex;
-  
-  
+
+
 namespace asdfns {
-    
+
   struct Point3D {
     int x,y,z;
     Point3D(int x, int y, int z) { this->x = x; this->y = y; this->z = z;}
@@ -45,7 +45,7 @@ namespace asdfns {
   typedef std::vector<Polygon*> PolygonList;
   typedef std::vector<int> VertexIndexList;
   typedef std::vector<Raster2VertexFactor> Raster2VertexList;
-  
+
   class Building {
     public:
       Polygon *poly;
@@ -55,16 +55,16 @@ namespace asdfns {
       GLfloat fCenterX, fCenterY;
       GLfloat fmeanCenterX, fmeanCenterY;
   };
-  
+
   typedef std::vector<Building*> BuildingList;
-  
-  
-  
+
+
+
 	class Asdf : public LinearInterpolatedAnimateable {
 
 		private:
 			const char* photoFilename;
-			
+
 
 			float v1[3], v2[3], v3[3], v4[3], v5[3], v6[3], v7[3], v8[3];
 			float vn1[3], vn2[3], vn3[3];
@@ -77,7 +77,7 @@ namespace asdfns {
       CvMemStorage *cvMemStorage;
       _IplImage *tempBinarizedImage;
       BuildingList buildings;
-      
+
       std::vector<GLfloat> tmpVertexVector;
       std::vector<GLfloat> tmpNormalsVector;
       std::vector<GLfloat> roofsVertexVector;
@@ -87,8 +87,8 @@ namespace asdfns {
       GLfloat *myRoofsVertexArray;
       GLfloat *myRoofsNormalsArray;
       int tessMissedCounter;
-      void Asdf::CreateVertexArray();
-      void Asdf::TessellateBuilding(Building &building);
+      void CreateVertexArray();
+      void TessellateBuilding(Building &building);
 		protected:
 			virtual void DrawAtPosition( float* position, float factor, int tick );
 

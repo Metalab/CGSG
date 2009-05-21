@@ -209,23 +209,11 @@
 				Name="effects"
 				>
 				<File
-					RelativePath=".\src\effects\ObjectContainer.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\src\effects\Photo.cpp"
 					>
 				</File>
 				<File
 					RelativePath=".\src\effects\PhotoParser.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\effects\Ring.cpp"
-					>
-				</File>
-				<File
-					RelativePath=".\src\effects\RingParser.cpp"
 					>
 				</File>
 				<File
@@ -241,6 +229,22 @@
 					</File>
 					<File
 						RelativePath=".\src\effects\Asdf\AsdfParser.cpp"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="multika"
+					>
+					<File
+						RelativePath=".\src\effects\multiKa\ObjectContainer.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\multiKa\Ring.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\multiKa\RingParser.cpp"
 						>
 					</File>
 				</Filter>
@@ -323,27 +327,11 @@
 					>
 				</File>
 				<File
-					RelativePath=".\src\effects\Base3DObject.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\effects\ObjectContainer.h"
-					>
-				</File>
-				<File
 					RelativePath=".\src\effects\Photo.h"
 					>
 				</File>
 				<File
 					RelativePath=".\src\effects\PhotoParser.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\effects\Ring.h"
-					>
-				</File>
-				<File
-					RelativePath=".\src\effects\RingParser.h"
 					>
 				</File>
 				<File
@@ -359,6 +347,30 @@
 					</File>
 					<File
 						RelativePath=".\src\effects\Asdf\AsdfParser.h"
+						>
+					</File>
+				</Filter>
+				<Filter
+					Name="multika"
+					>
+					<File
+						RelativePath=".\src\effects\multiKa\Base3DObject.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\multiKa\ObjectContainer.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\multiKa\Ring.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\multiKa\RingParser.h"
+						>
+					</File>
+					<File
+						RelativePath=".\src\effects\multiKa\Spirograph.h"
 						>
 					</File>
 				</Filter>

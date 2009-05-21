@@ -25,7 +25,7 @@
 // external types that we need to reference but whose size we don't need
 struct CvMemStorage;
 struct _IplImage;
-class SDL_mutex;
+struct SDL_mutex;
 
 
 namespace asdfns {

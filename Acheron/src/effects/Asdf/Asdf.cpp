@@ -14,6 +14,10 @@
 #include "Asdf.h"
 #include "../../misc.h"
 
+#ifdef WIN32
+#define STDCALL __stdcall
+#endif
+
 using namespace asdfns;
 using namespace std;
 
@@ -217,14 +221,14 @@ void mytessError(GLenum err, void *)
 	gluErrorString(err);
 }
 
-void __stdcall mytessBegin(GLenum type, void *user_data) {
+void STDCALL mytessBegin(GLenum type, void *user_data) {
 }
 
-void __stdcall mytessEdgeFlagCB(GLboolean flag ) {
+void STDCALL mytessEdgeFlagCB(GLboolean flag ) {
 }
 
 
-void __stdcall tessVcbd(void *v, void *user_data) { //USE WITH GLU_TESS_VERTEX_DATA
+void STDCALL tessVcbd(void *v, void *user_data) { //USE WITH GLU_TESS_VERTEX_DATA
 	tessUserData *tud = (tessUserData*) user_data;
 	Building *building = (Building*) tud->building;
 	VertexIndexList* vil = (*building).orderedVertices;
@@ -256,9 +260,9 @@ void Asdf::TessellateBuilding(Building &building) {
 		tmppd[4*i+3] =  i;
 	}
 
-	gluTessCallback(tess,  GLU_TESS_BEGIN_DATA, (void(__stdcall *)())&mytessBegin);
-	gluTessCallback(tess,  GLU_TESS_EDGE_FLAG, (void(__stdcall *)())&mytessEdgeFlagCB); //forces generation of GL_TRIANGLES only  yeah!
-	gluTessCallback(tess, GLU_TESS_VERTEX_DATA,	(void (__stdcall *)())&tessVcbd);
+	gluTessCallback(tess,  GLU_TESS_BEGIN_DATA, (void(STDCALL *)())&mytessBegin);
+	gluTessCallback(tess,  GLU_TESS_EDGE_FLAG, (void(STDCALL *)())&mytessEdgeFlagCB); //forces generation of GL_TRIANGLES only  yeah!
+	gluTessCallback(tess, GLU_TESS_VERTEX_DATA,	(void (STDCALL *)())&tessVcbd);
 
 	tessUserData polyData;
 	polyData.poly = poly;

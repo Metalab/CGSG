@@ -24,7 +24,7 @@ class LinearInterpolatedAnimateable : public AnimateableObject {
 			for (int i = 0; i < 3; i++)
 				pos[i] = startPos[i] * invFactor + endPos[i]*factor;
 
-			DrawAtPosition(pos, factor, tick);
+			DrawAtPosition(pos, factor, tick, context);
 			return true;
 		}
 
@@ -41,7 +41,7 @@ class LinearInterpolatedAnimateable : public AnimateableObject {
 			this->endPos[2] = endPos[2];
 		}
 
-		virtual void DrawAtPosition(float *position, float factor, int tick) = 0;
+		virtual void DrawAtPosition(float *position, float factor, int tick, Context* context) = 0;
 
 	private:
 		float startPos[3];

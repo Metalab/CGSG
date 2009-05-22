@@ -78,7 +78,7 @@ void Photo::createVertices() {
 
 }
 
-void Photo::DrawAtPosition( float* position, float factor, int tick ) {
+void Photo::DrawAtPosition( float* position, float factor, int tick, Context* context ) {
 	float normal[3];
 
 	colors->update();

@@ -34,7 +34,7 @@ Text::Text(Font &theFont, const char *text, float *startPos, float *endPos, int 
 
 }
 
-void Text::DrawAtPosition(float* position, float factor, int tick) {
+void Text::DrawAtPosition(float* position, float factor, int tick, Context* context) {
 	glPushMatrix();
 	glTranslatef(position[0], position[1], position[2]);
 	float wobbleFact = factor * 1000;

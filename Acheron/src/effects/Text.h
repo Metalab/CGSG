@@ -21,7 +21,7 @@ class Text: public LinearInterpolatedAnimateable {
 
 
 	protected:
-		virtual void DrawAtPosition(float* position, float factor, int tick);
+		virtual void DrawAtPosition(float* position, float factor, int tick, Context* context);
 		void DrawCube(float x, float y, float z);
 
 	public:

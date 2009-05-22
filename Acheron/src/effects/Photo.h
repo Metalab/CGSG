@@ -34,7 +34,7 @@ namespace multiKa {
 			void createVertices();
 
 		protected:
-			virtual void DrawAtPosition( float* position, float factor, int tick );
+			virtual void DrawAtPosition( float* position, float factor, int tick, Context* context );
 
 		public:
 			Photo( float* startPos, float* endPos, const char* photoFilename, int startTick, int duration );

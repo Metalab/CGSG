@@ -27,6 +27,12 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 : LinearInterpolatedAnimateable( startPos, endPos, startTick, duration )
 {
 	this->colors = new HSBColors(3);
+	//FIXME
+	//set raster and searchdist via timeline params
+	raster_x = 32;
+  raster_y = 32;
+  raster_poly_search_distance = 300;
+  
 	//parse filename with opencv
 	//store vector of polygons with a vector for each polygons
 
@@ -95,11 +101,46 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 	tessMissedCounter = 0;
 	CreateVertexArray();
 	
-	
+	this->genPoly2RasterFactors(raster_x, raster_y, raster_poly_search_distance);
+  this->genSpec2RasterMapping(raster_x, raster_y,0);
 }
 
-void Asdf::DrawAtPosition( float* position, float factor, int tick ) {
-
+void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* context) {
+  
+  
+  
+  //FIXME
+  //add if for modify polys yes/no
+  BuildingList::const_iterator build, buildend;
+  build = buildings.begin();
+	buildend = buildings.end();
+  float s = 0;
+  int n = 0;
+  int p=0;
+  int r=0;
+	///*
+	for (;build != buildend; build++) {
+    s = GetSpecValByBuilding(**build, 50);
+  
+    Polygon *blah = (*build)->poly;
+    for (int i=(*blah).size()-1; i >= 0; i--) {
+      n=i-1;
+      i=i<0?(*blah).size()-1:i;
+      myVertexArray[p+2] = 50 + s*100;
+      myVertexArray[p+2+3] = 50 + s*100;
+      p+=12;
+    }
+    
+    VertexIndexList *bleh = (*build)->orderedVertices;  
+    for (int i=0;i<(*bleh).size();i++) {
+      //UARGH FIXME
+      //r is running beyond array size!
+      //if(r < roofsVertexArray.size()) {
+      //if(r < 150000) {
+      myRoofsVertexArray[r+2] = 50 + s*100;
+      r += 3;
+    } 
+  }
 	///*
 	glPushMatrix();
 	glTranslatef( position[0], position[1], position[2] );
@@ -304,3 +345,146 @@ void Asdf::TessellateBuilding(Building &building) {
 		//cout << "normal: " << normal[0] << ", " << normal[1] << ", " << normal[2] << endl;
 	}
 }
+
+
+/* search in a bounding box, near the centroid of the building, instead of the whole grid:
+  lightyears faster!
+*/
+void Asdf::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance) {
+
+    int maxX = this->maxX;//this->map.fragmentImageWidth;
+    int maxY = this->maxY;//this->map.fragmentImageHeight;
+    int rasterZ = 0;
+
+    int spacingX = maxX / rasterX;
+    int spacingY = maxY / rasterY;
+
+    //for buildings
+    ///*
+    int minRP = 0;
+    int maxRP = 0;
+    BuildingList::const_iterator build, buildend;
+    PolygonList::const_iterator poly, polyend;
+    build = buildings.begin();
+    buildend = buildings.end();
+    float dist = 0;
+    int pointCount = 0;
+    for (;build != buildend; build++) {
+      Building *building = *build;
+//      if( (*building).rasterPoints2affect) {
+        (*building).rasterPoints2affect->clear();
+        (*building).rasterPoints2affect->resize(0);
+//        cout << "CLEARING building rasterlist" << endl;
+//      }
+//      (*building).rasterPoints2affect = new Raster2VertexList();
+      Raster2VertexList* rasterList = (*building).rasterPoints2affect;
+      
+      int startX =  (int) floor( (-1*building->fCenterX - (maxDistance)) / spacingX);
+      int endX =  (int) ceil( (-1*building->fCenterX + (maxDistance)) / spacingX);
+      if(endX > rasterX || endX < 0)
+        endX = rasterX;
+      if(startX < 0 || startX > rasterX)
+        startX = 0;
+
+      int startY =  (int) floor( (-1*building->fCenterY - (maxDistance)) / spacingY);
+      int endY =  (int) ceil( (-1*building->fCenterY + (maxDistance)) / spacingY);
+      if(endY > rasterY || endY < 0)
+        endY = rasterY;
+      if(startY < 0 || startY > rasterY)
+        startY = 0;
+      
+      for(int x = startX; x < endX; x++) {
+        for(int y = startY; y < endY; y++) {
+          
+          //FIXME here centroid(x) is inverted, same problem with centroid drawing and calculation!
+          dist = sqrt(pow(spacingX*x - -1*building->fCenterX,2) + pow(-spacingY*y - building->fCenterY,2) );
+          if(dist <= maxDistance) {
+            //save the raster point for this the building
+            Raster2VertexFactor rvf;
+            rvf.rasterpoint = x * rasterY + y;
+            maxRP = rvf.rasterpoint > maxRP ? rvf.rasterpoint : maxRP;
+            minRP = rvf.rasterpoint < minRP && rvf.rasterpoint > 0 ? rvf.rasterpoint : minRP;
+            //printf("rp: %d\t",rvf.rasterpoint);
+            rvf.distance = dist;
+            (*rasterList).push_back(rvf);
+            pointCount++;
+          }
+        }
+      }
+    }
+    printf("\nminRP: %d\t",minRP);
+    printf("maxRP: %d\t\n",maxRP);
+    printf("found %d points\n",pointCount);
+    //*/
+}
+
+
+void Asdf::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex) {
+  int rasterSize = rasterX*rasterY;
+  float rasterIterator = (float)rasterSize / (float)SPECTRUM_BANDS;
+
+  printf("rasterIterator: %f\n",rasterIterator);
+  
+  if(this->spec2raster != NULL )
+    delete[] this->spec2raster;
+  
+  this->spec2raster = new int[rasterSize];
+
+  if(specStartIndex > SPECTRUM_BANDS || specStartIndex < 0) {
+    specStartIndex = 0;
+  }
+  int specIndex = specStartIndex;
+
+
+  //init
+  for(int i=0;i < rasterSize; i++) {
+      this->spec2raster[i] = specIndex; //=0
+  }
+
+  int c=0;
+  int specAdd = -1;
+  //map spectrum to the whole raster:
+  for(int i=0;i < rasterX; i++) {
+    for(int q=0;q < rasterY; q++) {
+        int p = i * rasterY + q;
+        this->spec2raster[p] = specIndex;
+        specIndex++;
+      c++;
+    }
+  }
+
+}
+
+float Asdf::GetSpecValByBuilding(Building &building, float height) {
+  return 0.7f;
+  /*
+  float specVar = 0;
+  //tmp:
+  float *spectrumPointer = context->getAudio()->getLogSpectrum( &spectrumSize );
+  
+  //Building *build = *building;
+  Polygon *poly = (Polygon*) building.poly;
+  if ((*poly).size() < 3) return 0;
+
+  Raster2VertexList *rasterPointList = building.rasterPoints2affect;
+  VertexIndexList *verticesOrder = building.orderedVertices;
+
+  float specDistHeightFactor = 0;
+  for (int i=(*rasterPointList).size()-1, n; i >= 0; i--) {
+    int rp = (*rasterPointList)[i].rasterpoint;
+    float dist = (*rasterPointList)[i].distance;
+    //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * (dist);         //rvf.rasterpoint = (x*rasterX)+(y);
+
+    //use average spectrum var of all rasterpoints for this building:
+    //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;         //rvf.rasterpoint = (x*rasterX)+(y);
+
+    //use maximum spectrum var of all rasterpoints for this building
+    float tmpspecv = MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[rp]+1)) ) * dist / 200;
+    specVar = tmpspecv > specVar ? tmpspecv : specVar;
+  }
+  //use average spectrum var of all rasterpoints for this building:
+  //specVar = (specDistHeightFactor/(*rasterPointList).size());
+  return specVar;*/
+}
+
+

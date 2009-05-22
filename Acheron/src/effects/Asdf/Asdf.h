@@ -94,8 +94,14 @@ namespace asdfns {
       void TessellateBuilding(Building &building);
       void genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance);
       void genSpec2RasterMapping(int rasterX, int rasertY, int specStartIndex);
+      float GetSpecValByBuilding(Building &building, float height);
+      int raster_x;
+      int raster_y;
+      float raster_poly_search_distance;
+      GLfloat maxX, maxY, minX, minY;
+      int *spec2raster;
 		protected:
-			virtual void DrawAtPosition( float* position, float factor, int tick );
+			virtual void DrawAtPosition( float* position, float factor, int tick, Context* context );
 
 		public:
 			Asdf( float* startPos, float* endPos, const char* photoFilename, int startTick, int duration );

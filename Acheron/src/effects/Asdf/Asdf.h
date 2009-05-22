@@ -78,6 +78,9 @@ namespace asdfns {
       _IplImage *tempBinarizedImage;
       BuildingList buildings;
 
+      GLfloat buildingheight;
+      int fadeintime;
+      
       std::vector<GLfloat> tmpVertexVector;
       std::vector<GLfloat> tmpNormalsVector;
       std::vector<GLfloat> roofsVertexVector;
@@ -89,11 +92,14 @@ namespace asdfns {
       int tessMissedCounter;
       void CreateVertexArray();
       void TessellateBuilding(Building &building);
+      void genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance);
+      void genSpec2RasterMapping(int rasterX, int rasertY, int specStartIndex);
 		protected:
 			virtual void DrawAtPosition( float* position, float factor, int tick );
 
 		public:
 			Asdf( float* startPos, float* endPos, const char* photoFilename, int startTick, int duration );
+			//Asdf( float* startPos, float* endPos, const char* photoFilename, int startTick, int duration, float buildingheight, int fadeintime);
 
 
 	};

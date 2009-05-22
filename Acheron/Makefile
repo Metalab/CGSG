@@ -4,9 +4,10 @@ CFLAGS = -Wall -ggdb `sdl-config --cflags` -framework OpenGL -I/opt/local/includ
 LIBS = -L/opt/local/lib `sdl-config --libs` -lSDL_image -framework CoreAudio -L/Developer/FMOD\ Programmers\ API/api/lib -lfmodex -lSDL_ttf -lglew `pkg-config opencv --libs`
 
 
+#g++ src/*.cpp src/effects/*.cpp src/effects/Asdf/*.cpp src/effects/zoom/*.cpp $^ $(CFLAGS) $(LIBS) -o workingDir/acheron
 #%:%.cpp
 all:
-	g++ src/*.cpp src/effects/*.cpp src/effects/Asdf/*.cpp $^ $(CFLAGS) $(LIBS) -o workingDir/acheron
+	g++ src/*.cpp src/effects/*.cpp src/effects/*/*.cpp $^ $(CFLAGS) $(LIBS) -o workingDir/acheron
 
 
 obj:

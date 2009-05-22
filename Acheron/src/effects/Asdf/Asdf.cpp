@@ -16,6 +16,8 @@
 
 #ifdef WIN32
 #define STDCALL __stdcall
+#else
+#define STDCALL
 #endif
 
 using namespace asdfns;
@@ -92,6 +94,8 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 
 	tessMissedCounter = 0;
 	CreateVertexArray();
+	
+	
 }
 
 void Asdf::DrawAtPosition( float* position, float factor, int tick ) {

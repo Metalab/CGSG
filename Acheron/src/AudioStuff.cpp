@@ -32,7 +32,7 @@ AudioStuff::AudioStuff() {
 		exit(-1);
 	}
 
-	result = system->createSound("kandel_maschine_sample1.ogg", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
+	result = system->createSound("music.mp3", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
 //	result = system->createSound("/home/max/Music/testSounds/kandel_maschine_sample1.ogg", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
 //	result = system->createStream("/dev/dsp", FMOD_CREATESTREAM, 0, &sound);
 	if( result != FMOD_OK ){

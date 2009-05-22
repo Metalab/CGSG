@@ -132,10 +132,10 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
       tmpResulty += ( (double)(*bpoly)[i].y + (double)(*bpoly)[p].y ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
     }
 
-    (*building).dCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
-    (*building).dCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
-    (*building).fCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
-    (*building).fCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+    (*building).dCenterX = ( 1 / (A * 6.)) * tmpResultx;
+    (*building).dCenterY = ( 1 / (A * 6.)) * tmpResulty;
+    (*building).fCenterX = (float)(( 1 / (A * 6.)) * tmpResultx);
+    (*building).fCenterY = (float)(( 1 / (A * 6.)) * tmpResulty);
 
 //    printf("centerX:%f\n",(*building).fCenterX);
 
@@ -205,16 +205,16 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
       i=i<0?(*blah).size()-1:i;
       //myVertexArray[p+2] = 5.0f + s*5 *-1;
       //myVertexArray[p+2+3] = 5.0f + s*5 *-1;
-      myVertexArray[p+2] = 5.0f + s*0.8 *-1;
-      myVertexArray[p+2+3] = 5.0f + s*0.8 *-1;
+      myVertexArray[p+2] = 5.0f + s*0.8f *-1;
+      myVertexArray[p+2+3] = 5.0f + s*0.8f *-1;
       p+=12;
     }
     
     VertexIndexList *bleh = (*build)->orderedVertices;  
-    for (int i=0;i<(*bleh).size();i++) {
+    for (unsigned int i=0;i<(*bleh).size();i++) {
       //UARGH FIXME
       //r is running beyond array size?  (ooold note :) )
-      myRoofsVertexArray[r+2] = 5.0f + s*0.8 *-1;
+      myRoofsVertexArray[r+2] = 5.0f + s*0.8f *-1;
       r += 3;
     } 
   }
@@ -437,8 +437,8 @@ void Asdf::TessellateBuilding(Building &building) {
 */
 void Asdf::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance) {
 
-    int maxX = this->maxX;//this->map.fragmentImageWidth;
-    int maxY = this->maxY;//this->map.fragmentImageHeight;
+    int maxX = (int)this->maxX;//this->map.fragmentImageWidth;
+    int maxY = (int)this->maxY;//this->map.fragmentImageHeight;
     int rasterZ = 0;
 
     int spacingX = maxX / rasterX;
@@ -555,7 +555,7 @@ float Asdf::GetSpecValByBuilding(Building &building, float height) {
   VertexIndexList *verticesOrder = building.orderedVertices;
   //cout << "rasterpointlist: " << (*rasterPointList).size() << endl;
   float specDistHeightFactor = 0;
-  for (int i=(*rasterPointList).size()-1, n; i >= 0; i--) {
+  for (int i=(*rasterPointList).size()-1; i >= 0; i--) {
     int rp = (*rasterPointList)[i].rasterpoint;
     float dist = (*rasterPointList)[i].distance;
     //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * (dist);         //rvf.rasterpoint = (x*rasterX)+(y);
@@ -578,7 +578,7 @@ float Asdf::GetSpecValByBuilding(Building &building, float height) {
   return specVar;//*/
 }
 
-void Asdf::findPolyMaxima(const Polygon &poly) {
+void Asdf::findPolyMaxima(const ::asdfns::Polygon &poly) {
 	if (poly.size() < 3) return;
 
 	for (int i=poly.size()-1, n; i >= 0; i--) {
@@ -613,8 +613,8 @@ void Asdf::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
 //  int maxY = this->map.fragmentImageHeight;
   spectrumPointer = context->getAudio()->getSpectrum( &spectrumSize );
   
-  int maxX = this->maxX;
-  int maxY = this->maxY;
+  int maxX = (int)this->maxX;
+  int maxY = (int)this->maxY;
 
   int spacingX = maxX / rasterX;
   int spacingY = maxY / rasterY;
@@ -628,15 +628,15 @@ void Asdf::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
         //float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
       	float specHeight = spectrumPointer[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[x*rasterY+y]))) * 50;
         //float specHeight = 0;
-        glColor3f(0.0,  0.86*spectrumPointer[this->spec2raster[x*rasterY+y]]*10,  0.8*spectrumPointer[this->spec2raster[x*rasterY+y]]*10);
-        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
+        glColor3f(0,  0.86f*spectrumPointer[this->spec2raster[x*rasterY+y]]*10,  0.8f*spectrumPointer[this->spec2raster[x*rasterY+y]]*10);
+        glVertex3f( (float)spacingX*x,           (float)-y*spacingY,            rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x,           (float)-y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x,           (float)-y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x+spacingX,  (float)-y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x+spacingX,  (float)-y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x+spacingX,  (float)-y*spacingY,            rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x+spacingX,  (float)-y*spacingY,            rasterZ+specHeight);
+        glVertex3f( (float)spacingX*x,           (float)-y*spacingY,            rasterZ+specHeight);
       }
   }
 
@@ -676,8 +676,8 @@ void Asdf::DrawCentroid(Building &building, float height) {
 void Asdf::DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY) {
   spectrumPointer = context->getAudio()->getSpectrum( &spectrumSize );
 
-  int maxX = this->maxX;//this->map.fragmentImageWidth;
-  int maxY = this->maxY;//this->map.fragmentImageHeight;
+  int maxX = (int)this->maxX;//this->map.fragmentImageWidth;
+  int maxY = (int)this->maxY;//this->map.fragmentImageHeight;
 
   int spacingX = maxX / rasterX;
   int spacingY = maxY / rasterY;
@@ -690,16 +690,16 @@ void Asdf::DrawCentroid2GridLines(Building &building, float height, float gridHe
   float dist = 0;
 
   glBegin(GL_LINES);
-  for (int i=(*rasterList).size()-1, n; i >= 0; i--) {
-    float y = (*rasterList)[i].rasterpoint % rasterY;
-    float x = ( (*rasterList)[i].rasterpoint - y ) / rasterY;
+  for (int i=(*rasterList).size()-1; i >= 0; i--) {
+    int y = (*rasterList)[i].rasterpoint % rasterY;
+    int x = ( (*rasterList)[i].rasterpoint - y ) / rasterY;
     //rvf.rasterpoint = x * rasterY + y;
     dist = (*rasterList)[i].distance;
     
-    glColor3f(1/dist*0.6,  1/dist*0.75,  0.3);
+    glColor3f(1/dist*0.6f,  1/dist*0.75f,  0.3f);
     glVertex3f( -building.fCenterX, building.fCenterY, 0+spectrumPointer[this->spec2raster[(*rasterList)[i].rasterpoint]+1]* ((16000/SPECTRUM_BANDS * (x*rasterY+y+1))) * 50);
-    glColor3f(0.023,  0.3*(1/dist),  0.2);
-    glVertex3f( spacingX*x, -spacingY*y, gridHeight);
+    glColor3f(0.023f,  0.3f*(1/dist),  0.2f);
+    glVertex3f( (float)spacingX*x, (float)-spacingY*y, gridHeight);
   }
   glEnd();
 }

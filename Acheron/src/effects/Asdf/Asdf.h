@@ -63,6 +63,8 @@ namespace asdfns {
 	class Asdf : public LinearInterpolatedAnimateable {
 
 		private:
+		  Context *context;
+		  
 			const char* photoFilename;
 
 
@@ -95,11 +97,18 @@ namespace asdfns {
       void genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance);
       void genSpec2RasterMapping(int rasterX, int rasertY, int specStartIndex);
       float GetSpecValByBuilding(Building &building, float height);
+      void findPlaneMaxima();
+      void findPolyMaxima(const Polygon &poly);
+      void DrawFFTGrid(int rasterX, int rasterY, int rasterZ);
+      void DrawCentroid(Building &building, float height);
+      void DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY);
       int raster_x;
       int raster_y;
       float raster_poly_search_distance;
       GLfloat maxX, maxY, minX, minY;
       int *spec2raster;
+      int spectrumSize;
+  		float *spectrumPointer;
 		protected:
 			virtual void DrawAtPosition( float* position, float factor, int tick, Context* context );
 

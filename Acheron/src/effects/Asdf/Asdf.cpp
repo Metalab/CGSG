@@ -31,11 +31,13 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 	//set raster and searchdist via timeline params
 	raster_x = 32;
   raster_y = 32;
-  raster_poly_search_distance = 300;
+  raster_poly_search_distance = 400;
+  
+  
   
 	//parse filename with opencv
 	//store vector of polygons with a vector for each polygons
-
+  
 	cvRessourcesGuard = SDL_CreateMutex();
 	cvMemStorage = cvCreateMemStorage(0);
 
@@ -85,7 +87,71 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 			if (x == 1 || y == 1 || x == img->width-2 || y == img->height-2)
 				incomplete = true;
 		}
+    //calculate center of poly (center of gravity)
+    //http://local.wasp.uwa.edu.au/~pbourke/geometry/polyarea/
 
+     //printf("new poly with %d polys\n",polys->total);
+
+    //mean center ( not center of gravity)
+    float tmpX=0;
+    float tmpY=0;
+    float tmpResult=0;
+    for (int i=0; i < polys->total; i++) {
+      tmpX +=  (*bpoly)[i].x;
+      tmpY +=  (*bpoly)[i].y;
+    }
+    (*building).fmeanCenterX = tmpX/polys->total;
+    (*building).fmeanCenterY = tmpY/polys->total;
+
+    double A=0;
+    int p=0;
+
+//area of poly:
+    int i,j;
+    double area = 0;
+
+    for (i=0;i<polys->total;i++) {
+      j = (i + 1) % polys->total;
+      area += (*bpoly)[i].x * (*bpoly)[j].y;
+      area -= (*bpoly)[i].y * (*bpoly)[j].x;
+//      area += ((*bpoly)[i].x * (*bpoly)[j].y) - ((*bpoly)[i].y * (*bpoly)[j].x);
+    }
+
+    area /= 2;
+    A = (area < 0 ? area * -1 : area );
+
+
+
+//centroid:
+    double tmpResultx=0;
+    double tmpResulty=0;
+    p=0;
+    for (int i=0; i < polys->total; i++) {
+      p = (i + 1) % polys->total;
+      tmpResultx += ( (double)(*bpoly)[i].x + (double)(*bpoly)[p].x ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
+      tmpResulty += ( (double)(*bpoly)[i].y + (double)(*bpoly)[p].y ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
+    }
+
+    (*building).dCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
+    (*building).dCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+    (*building).fCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
+    (*building).fCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+
+//    printf("centerX:%f\n",(*building).fCenterX);
+
+//FIXME
+//i have no idea why, but to get centroids for polys inside other polys right, i have to mangle the centroid...
+// otherwise it would have inverted x,y coords 
+//carmack come save me
+    if((*building).fCenterY > 0) {
+      (*building).dCenterY *= -1.;
+      (*building).fCenterY *= -1.;
+    }
+
+    if((*building).fCenterX > 0) {
+      (*building).dCenterX *= -1.;
+      (*building).fCenterX *= -1.;
+    }
 		if (!incomplete) {
 			buildings.push_back(building);
 		}
@@ -99,6 +165,12 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 		throw "could not release cvRessourcesGuard";
 
 	tessMissedCounter = 0;
+	maxX=FLT_MIN;
+  minX=FLT_MAX;
+  maxY=FLT_MIN;
+  minY=FLT_MAX;
+  
+  findPlaneMaxima();
 	CreateVertexArray();
 	
 	this->genPoly2RasterFactors(raster_x, raster_y, raster_poly_search_distance);
@@ -107,7 +179,7 @@ Asdf::Asdf( float* startPos, float* endPos, const char* photoFilename, int start
 
 void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* context) {
   
-  
+  this->context = context;
   
   //FIXME
   //add if for modify polys yes/no
@@ -116,28 +188,28 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
 	buildend = buildings.end();
   float s = 0;
   int n = 0;
-  int p=0;
+  int p=6;//coords are inverted compared to augenkrach. floor coords are roof coords here... oh lol. happy inverting everything
   int r=0;
 	///*
 	for (;build != buildend; build++) {
-    s = GetSpecValByBuilding(**build, 50);
-  
+    s = GetSpecValByBuilding(**build, 5.0f);
+    //cout << "specforBuilding: " << s << endl;
     Polygon *blah = (*build)->poly;
     for (int i=(*blah).size()-1; i >= 0; i--) {
       n=i-1;
       i=i<0?(*blah).size()-1:i;
-      myVertexArray[p+2] = 50 + s*100;
-      myVertexArray[p+2+3] = 50 + s*100;
+      //myVertexArray[p+2] = 5.0f + s*5 *-1;
+      //myVertexArray[p+2+3] = 5.0f + s*5 *-1;
+      myVertexArray[p+2] = 5.0f + s*15 *-1;
+      myVertexArray[p+2+3] = 5.0f + s*15 *-1;
       p+=12;
     }
     
     VertexIndexList *bleh = (*build)->orderedVertices;  
     for (int i=0;i<(*bleh).size();i++) {
       //UARGH FIXME
-      //r is running beyond array size!
-      //if(r < roofsVertexArray.size()) {
-      //if(r < 150000) {
-      myRoofsVertexArray[r+2] = 50 + s*100;
+      //r is running beyond array size?  (ooold note :) )
+      myRoofsVertexArray[r+2] = 5.0f + s*15 *-1;
       r += 3;
     } 
   }
@@ -146,14 +218,21 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
 	glTranslatef( position[0], position[1], position[2] );
 	glRotatef( 90.0f, 1,0,0 );
 
-	colors->update();
-	GLfloat mat_shininess[] = {80.0};
-	glMaterialfv (GL_FRONT, GL_SHININESS, mat_shininess);
-	colors->setMaterial(GL_FRONT, GL_AMBIENT);
-	colors->setMaterial(GL_FRONT, GL_DIFFUSE);
-	colors->setMaterial(GL_FRONT, GL_SPECULAR);
 
+  //debug:
+  //DrawFFTGrid(raster_x, raster_y, 0);
+  /*
+  //colors->update();
+  build = buildings.begin();
+	buildend = buildings.end();
+  for (;build != buildend; build++) {
+    DrawCentroid2GridLines(**build, 0, 0, raster_x, raster_y);
+    DrawCentroid(**build, 100); //slow debug func
+  }
+  //*/
+  
 	//glDisable(GL_CULL_FACE);
+	///*
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_NORMAL_ARRAY);
 
@@ -167,6 +246,7 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
 
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);
+	//*/
 	//glEnable(GL_CULL_FACE);
 
 	glPopMatrix();
@@ -425,7 +505,7 @@ void Asdf::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex) {
 
   printf("rasterIterator: %f\n",rasterIterator);
   
-  if(this->spec2raster != NULL )
+  //if(this->spec2raster != NULL )
     delete[] this->spec2raster;
   
   this->spec2raster = new int[rasterSize];
@@ -456,19 +536,19 @@ void Asdf::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex) {
 }
 
 float Asdf::GetSpecValByBuilding(Building &building, float height) {
-  return 0.7f;
-  /*
+  //return 0.7f;
+  ///*
   float specVar = 0;
   //tmp:
-  float *spectrumPointer = context->getAudio()->getLogSpectrum( &spectrumSize );
-  
+  spectrumPointer = context->getAudio()->getSpectrum( &spectrumSize );
+  //cout << "spectrum 150: " << spectrumPointer[150] << endl;
   //Building *build = *building;
   Polygon *poly = (Polygon*) building.poly;
   if ((*poly).size() < 3) return 0;
 
   Raster2VertexList *rasterPointList = building.rasterPoints2affect;
   VertexIndexList *verticesOrder = building.orderedVertices;
-
+  //cout << "rasterpointlist: " << (*rasterPointList).size() << endl;
   float specDistHeightFactor = 0;
   for (int i=(*rasterPointList).size()-1, n; i >= 0; i--) {
     int rp = (*rasterPointList)[i].rasterpoint;
@@ -478,13 +558,146 @@ float Asdf::GetSpecValByBuilding(Building &building, float height) {
     //use average spectrum var of all rasterpoints for this building:
     //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;         //rvf.rasterpoint = (x*rasterX)+(y);
 
+    //NO IDEA how to really calc the right specvar .... 
+    
     //use maximum spectrum var of all rasterpoints for this building
-    float tmpspecv = MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[rp]+1)) ) * dist / 200;
+    //float tmpspecv = spectrumPointer[this->spec2raster[rp]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[rp]+1)) ) * dist / 200;
+    float tmpspecv = spectrumPointer[this->spec2raster[rp]]  * dist / 200;
+    //float tmpspecv = spectrumPointer[this->spec2raster[rp]];
+    //cout << "specAtRP: " << spectrumPointer[this->spec2raster[rp]] << " tmpspecv: " << tmpspecv << endl;
     specVar = tmpspecv > specVar ? tmpspecv : specVar;
   }
   //use average spectrum var of all rasterpoints for this building:
   //specVar = (specDistHeightFactor/(*rasterPointList).size());
-  return specVar;*/
+  
+  return specVar;//*/
 }
+
+void Asdf::findPolyMaxima(const Polygon &poly) {
+	if (poly.size() < 3) return;
+
+	for (int i=poly.size()-1, n; i >= 0; i--) {
+    n = i-1;
+    if (n < 0) n = poly.size()-1;
+
+		maxX = poly[i].x > maxX ? poly[i].x : maxX;
+		maxY = poly[i].y > maxY ? poly[i].y : maxY;
+		minX = poly[i].x < minX ? poly[i].x : minX;
+		minY = poly[i].y < minY ? poly[i].y : minY;
+  }
+}
+
+void Asdf::findPlaneMaxima() {
+  BuildingList::const_iterator build, buildend;
+  
+	PolygonList::const_iterator poly, polyend;
+	build = buildings.begin();
+  buildend = buildings.end();
+	for (;build != buildend; build++) {
+		Polygon *blah = (*build)->poly;
+		findPolyMaxima(*blah);
+	}
+	printf("minX: %f\n",minX);
+	printf("maxX: %f\n",maxX);
+	printf("minY: %f\n",minY);
+	printf("maxY: %f\n",maxY);
+}
+
+void Asdf::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
+//  int maxX = this->map.fragmentImageWidth;
+//  int maxY = this->map.fragmentImageHeight;
+  spectrumPointer = context->getAudio()->getSpectrum( &spectrumSize );
+  
+  int maxX = this->maxX;
+  int maxY = this->maxY;
+
+  int spacingX = maxX / rasterX;
+  int spacingY = maxY / rasterY;
+
+  glBegin(GL_LINES);
+
+  for(int x = 0; x < rasterX; x++) {
+
+      for(int y = 0; y < rasterY; y++) {
+        //float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]]*4000;
+        //float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
+      	float specHeight = spectrumPointer[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[x*rasterY+y]))) * 50;
+        //float specHeight = 0;
+        glColor3f(0.0,  0.86*spectrumPointer[this->spec2raster[x*rasterY+y]]*10,  0.8*spectrumPointer[this->spec2raster[x*rasterY+y]]*10);
+        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
+        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
+        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
+      }
+  }
+
+  glEnd();
+}
+
+void Asdf::DrawCentroid(Building &building, float height) {
+  Polygon *poly = (Polygon*) building.poly;
+  if ((*poly).size() < 3) return;
+
+	glBegin(GL_LINES);
+  //glColor3f(0.,  1,  50/65384);
+  /*
+  FIXME   why do i have to invert the coords here? in drawpoly its +x, -y  here i have to do -x, +y  to make it look(!) correct. maybe computation in map.cpp is still wrong
+  */
+  if(-building.fCenterX < 0) {
+    //glColor3f(0.,  1,  0.8);
+  }  
+  glVertex3f( -building.fCenterX, building.fCenterY, 0);
+  glVertex3f( -building.fCenterX, building.fCenterY, 200);
+
+  glVertex3f( -building.fCenterX, building.fCenterY, 0);
+  glVertex3f( -building.fCenterX+10, building.fCenterY, 0);
+
+  glVertex3f( -building.fCenterX+10, building.fCenterY, 0);
+  glVertex3f( -building.fCenterX+10, building.fCenterY+10, 0);
+
+  glVertex3f( -building.fCenterX+10, building.fCenterY+10, 0);
+  glVertex3f( -building.fCenterX, building.fCenterY+10, 0);
+
+  glVertex3f( -building.fCenterX, building.fCenterY+10, 0);
+  glVertex3f( -building.fCenterX, building.fCenterY, 0);
+
+  glEnd();
+}
+
+void Asdf::DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY) {
+  spectrumPointer = context->getAudio()->getSpectrum( &spectrumSize );
+
+  int maxX = this->maxX;//this->map.fragmentImageWidth;
+  int maxY = this->maxY;//this->map.fragmentImageHeight;
+
+  int spacingX = maxX / rasterX;
+  int spacingY = maxY / rasterY;
+
+  Raster2VertexList* rasterList = building.rasterPoints2affect;
+  Raster2VertexList::const_iterator rasterPoint, rasterPointEnd;
+
+  rasterPoint = rasterList->begin();
+  rasterPointEnd = rasterList->end();
+  float dist = 0;
+
+  glBegin(GL_LINES);
+  for (int i=(*rasterList).size()-1, n; i >= 0; i--) {
+    float y = (*rasterList)[i].rasterpoint % rasterY;
+    float x = ( (*rasterList)[i].rasterpoint - y ) / rasterY;
+    //rvf.rasterpoint = x * rasterY + y;
+    dist = (*rasterList)[i].distance;
+    
+    glColor3f(1/dist*0.6,  1/dist*0.75,  0.3);
+    glVertex3f( -building.fCenterX, building.fCenterY, 0+spectrumPointer[this->spec2raster[(*rasterList)[i].rasterpoint]+1]* ((16000/SPECTRUM_BANDS * (x*rasterY+y+1))) * 50);
+    glColor3f(0.023,  0.3*(1/dist),  0.2);
+    glVertex3f( spacingX*x, -spacingY*y, gridHeight);
+  }
+  glEnd();
+}
+
 
 

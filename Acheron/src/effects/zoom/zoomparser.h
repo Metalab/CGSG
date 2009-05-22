@@ -1,9 +1,9 @@
 
 
-#ifndef ZOOMPARSER_H 
+#ifndef ZOOMPARSER_H
 #define ZOOMPARSER_H
 
-#include "../../timelineItemParser.h"
+#include "../../TimelineItemParser.h"
 #include "../../AnimateableObject.h"
 
 namespace zoom {

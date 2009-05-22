@@ -25,7 +25,7 @@ namespace multiKa {
 
 			void assignChild(Base3DObject *myChild) { child = myChild; }
 //			virtual void draw(AudioStuff &audio);
-			virtual void draw( float spectrum[256], int spectrumStart, int spectrumEnd){}
+			virtual void draw( float spectrum[], int spectrumStart, int spectrumEnd){}
 //			virtual void draw();
 
 		protected:

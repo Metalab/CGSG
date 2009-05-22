@@ -18,5 +18,8 @@ template<typename Tkey, typename Tvalue> struct deleteSecond : public std::unary
 
 void calcNV( float v1[], float v2[], float v3[], float* normalVector );
 
+float calcDistance( float aX, float aY, float aZ, float bX, float bY, float bZ);
+
+
 
 #endif /* MISC_H_ */

@@ -5,6 +5,8 @@
  *      Author: meta, cygen
  */
 
+#include <math.h>
+
 void calcNV( float v1[], float v2[], float v3[], float* normalVector ) {
 
 	float aX, aY, aZ, bX, bY, bZ;
@@ -25,4 +27,12 @@ void calcNV( float v1[], float v2[], float v3[], float* normalVector ) {
 	normalVector[1] = aZ*bX - aX*bZ;
 	normalVector[2] = aX*bY - aY*bX;
 
+}
+
+float calcDistance( float aX, float aY, float aZ, float bX, float bY, float bZ) {
+	return sqrt(
+				pow( (aX-bX), 2 )+
+				pow( (aY-bY), 2 )+
+				pow( (aZ-bZ), 2 )
+			);
 }

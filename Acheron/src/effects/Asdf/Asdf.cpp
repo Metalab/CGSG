@@ -188,7 +188,12 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
 	buildend = buildings.end();
   float s = 0;
   int n = 0;
-  int p=6;//coords are inverted compared to augenkrach. floor coords are roof coords here... oh lol. happy inverting everything
+  //FIXME
+  //dont hit me:
+  ////coords are inverted compared to augenkrach. floor coords are roof coords here... oh lol.
+  //happy inverting everything (see *-1 throughout the code)
+  //thats also why roof vertices have to be drawn in inverted order after tessellation!
+  int p=6;
   int r=0;
 	///*
 	for (;build != buildend; build++) {
@@ -200,8 +205,8 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
       i=i<0?(*blah).size()-1:i;
       //myVertexArray[p+2] = 5.0f + s*5 *-1;
       //myVertexArray[p+2+3] = 5.0f + s*5 *-1;
-      myVertexArray[p+2] = 5.0f + s*15 *-1;
-      myVertexArray[p+2+3] = 5.0f + s*15 *-1;
+      myVertexArray[p+2] = 5.0f + s*0.8 *-1;
+      myVertexArray[p+2+3] = 5.0f + s*0.8 *-1;
       p+=12;
     }
     
@@ -209,7 +214,7 @@ void Asdf::DrawAtPosition( float* position, float factor, int tick, Context* con
     for (int i=0;i<(*bleh).size();i++) {
       //UARGH FIXME
       //r is running beyond array size?  (ooold note :) )
-      myRoofsVertexArray[r+2] = 5.0f + s*15 *-1;
+      myRoofsVertexArray[r+2] = 5.0f + s*0.8 *-1;
       r += 3;
     } 
   }
@@ -561,8 +566,8 @@ float Asdf::GetSpecValByBuilding(Building &building, float height) {
     //NO IDEA how to really calc the right specvar .... 
     
     //use maximum spectrum var of all rasterpoints for this building
-    //float tmpspecv = spectrumPointer[this->spec2raster[rp]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[rp]+1)) ) * dist / 200;
-    float tmpspecv = spectrumPointer[this->spec2raster[rp]]  * dist / 200;
+    float tmpspecv = spectrumPointer[this->spec2raster[rp]] * ((16000/SPECTRUM_BANDS * (this->spec2raster[rp]+1)) ) * dist / 200;
+    //float tmpspecv = spectrumPointer[this->spec2raster[rp]]  * dist / 200;
     //float tmpspecv = spectrumPointer[this->spec2raster[rp]];
     //cout << "specAtRP: " << spectrumPointer[this->spec2raster[rp]] << " tmpspecv: " << tmpspecv << endl;
     specVar = tmpspecv > specVar ? tmpspecv : specVar;

@@ -59,7 +59,8 @@ void resizeGL(int w, int h)
 	glViewport(0, 0, w, h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(110.0f, 1.0f*w/h, 0.1f, 1000.0f);
+	float aspect  = w/(float)h;
+	gluPerspective(90.0f/ aspect, aspect, 0.1f, (2<<14) + 100.0f);
 }
 
 void initGL(int w, int h)
@@ -147,7 +148,7 @@ int main( int argc, char ** argv ) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisample);
 	}
 
-	int width = 1280, height = 1024;
+	int width = 1024, height = 768;
 	Uint32 flags = SDL_OPENGL;
 	if (fullscreen) {
 		const SDL_VideoInfo *info = SDL_GetVideoInfo();
@@ -200,7 +201,7 @@ int main( int argc, char ** argv ) {
 		unsigned int now = SDL_GetTicks();
 
 		//read new objects
-		while( (obj = timelineReader->GetNextObject(now, 1000)) ) {
+		while( (obj = timelineReader->GetNextObject(now, 5000)) ) {
 			chronos->AddObject(obj);
 		}
 

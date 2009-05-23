@@ -5,6 +5,8 @@
  *      Author: max
  */
 
+#define NOMINMAX
+
 #include <GL/glew.h>
 
 #include "Spirograph.h"
@@ -254,7 +256,7 @@ void Spirograph::drawArm() {
 void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd ) {
 
 	float specPerSegment = (spectrumEnd-spectrumStart)/(float)length;
-	float spectrumPart[ length ];
+	float *spectrumPart = new float[ length ];
 
 	float tempSum;
 
@@ -358,5 +360,7 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
 	//glEnable(GL_CULL_FACE);
 
 	glPopMatrix();
+
+	delete[] spectrumPart;
 
 }

@@ -2,8 +2,10 @@
 #define ZOOM_H
 
 #include <string>
+#include <vector>
 
 #include "../../AnimateableObject.h"
+#include "../../Texture.h"
 
 namespace zoom {
 
@@ -12,16 +14,12 @@ namespace zoom {
 		int targetResolution;
 		int startLevel;
 		int endLevel;
+		std::vector<Texture*> textures;
 
 	public:
-		ZoomEffect(int startTick, int duration, int targetResolution, std::string imageDirectory, int startLevel, int endLevel)
-			: AnimateableObject(startTick, duration), targetResolution(targetResolution), imageDirectory(imageDirectory), startLevel(startLevel), endLevel(endLevel) {
+		ZoomEffect(int startTick, int duration, int targetResolution, std::string imageDirectory, int startLevel, int endLevel);
 
-				//load images
-
-		}
-
-		virtual ~ZoomEffect() { }
+		virtual ~ZoomEffect();
 
 		virtual bool Draw(int ticks, Context* context);
 	};

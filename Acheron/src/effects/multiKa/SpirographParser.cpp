@@ -5,6 +5,8 @@
  *      Author: max
  */
 
+#define NOMINMAX
+
 #include "SpirographParser.h"
 #include "Spirograph.h"
 #include "ObjectContainer.h"

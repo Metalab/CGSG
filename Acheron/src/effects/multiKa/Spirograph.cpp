@@ -54,23 +54,24 @@ void Spirograph::draw( float spectrum[], int spectrumStart, int spectrumEnd ) {
 
 	drawPath( spectrum, spectrumStart, spectrumEnd );
 
-	drawArm();
+	//drawArm();
 
 }
 
 void Spirograph::precalculate(){
-	// m(i,j) i spalte,j zeile
-	Matrix4f m =  Matrix4f::Identity();
+	glGetFloatv(GL_MODELVIEW_MATRIX, pathBuffer1);
 
+	// m(i,j) i spalte,j zeile
+	Vector4f m( pathBuffer1[12], pathBuffer1[13], pathBuffer1[14], 1 );
 	Matrix4f calcM =  Matrix4f::Identity();
 
 	// 1st rotation: glRotatef(a1,0,1,0);
-	calcM(0,0) = cos(a1);
-	calcM(2,0) = sin(a1);
+	calcM(0,0) =  cos(a1);
+	calcM(2,0) =  sin(a1);
 	calcM(0,2) = -sin(a1);
-	calcM(2,2) = cos(a1);
+	calcM(2,2) =  cos(a1);
 
-	m = m*calcM;
+	m = calcM*m;
 
 	// 1st translation: glTranslatef(d1,0,0);
 	calcM.setIdentity();
@@ -79,17 +80,17 @@ void Spirograph::precalculate(){
 	calcM(3,1) = 0;
 	calcM(3,2) = 0;
 
-	m = m*calcM;
+	m = calcM*m;
 
 	// 2nd rotation: glRotatef(a2,1,0,0);
 	calcM.setIdentity();
 
-	calcM(1,1) = cos(a2);
+	calcM(1,1) =  cos(a2);
 	calcM(2,1) = -sin(a2);
-	calcM(1,2) = sin(a2);
-	calcM(2,2) = cos(a2);
+	calcM(1,2) =  sin(a2);
+	calcM(2,2) =  cos(a2);
 
-	m = m*calcM;
+	m = calcM*m;
 
 	// 2nd translation: glTranslatef(0,d2,0);
 	calcM.setIdentity();
@@ -98,17 +99,17 @@ void Spirograph::precalculate(){
 	calcM(3,1) = d2;
 	calcM(3,2) = 0;
 
-	m = m*calcM;
+	m = calcM*m;
 
 	// 3rd rotation: glRotatef(a3,0,0,1);
 	calcM.setIdentity();
 
-	calcM(0,0) = cos(a3);
+	calcM(0,0) =  cos(a3);
 	calcM(1,0) = -sin(a3);
-	calcM(0,1) = sin(a3);
-	calcM(1,1) = cos(a3);
+	calcM(0,1) =  sin(a3);
+	calcM(1,1) =  cos(a3);
 
-	m = m*calcM;
+	m = calcM*m;
 
 	// 3rd translation: glTranslatef(0,0,d3);
 	calcM.setIdentity();
@@ -117,20 +118,17 @@ void Spirograph::precalculate(){
 	calcM(3,1) = 0;
 	calcM(3,2) = d3;
 
-	m = m*calcM;
+	m = calcM*m;
 
 	a1 = fmod( (a1+av1), 360 );
 	a2 = fmod( (a2+av2), 360 );
 	a3 = fmod( (a3+av3), 360 );
 
-
-
-	pathWriteBuffer[0] = m(3,0);//pathBuffer3[12];
-	pathWriteBuffer[1] = m(3,1);//pathBuffer3[13];
-	pathWriteBuffer[2] = m(3,2);//pathBuffer3[14];
+	pathWriteBuffer[0] = m(0);//pathBuffer3[12];
+	pathWriteBuffer[1] = m(1);//pathBuffer3[13];
+	pathWriteBuffer[2] = m(2);//pathBuffer3[14];
 
 	path->write( pathWriteBuffer );
-
 
 	pathLength++;
 
@@ -318,15 +316,16 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
   	// read current position, but dont increase read-pointer
   	path->read( pathReadBuffer1, 0 );
 
-	vertC[0] = distanceMod( 0.5+ pathReadBuffer1[0] + spectrumPart[ length-1 ], 0);
-	vertC[1] = 				0.5+ pathReadBuffer1[1] + spectrumPart[ length-1 ];
-  	vertC[2] = distanceMod( 0.5+ pathReadBuffer1[2] + spectrumPart[ length-1 ], 0);
+//	vertC[0] = distanceMod( 0.5+ pathReadBuffer1[0] + spectrumPart[ length-1 ], 0);
+//	vertC[1] = 				0.5+ pathReadBuffer1[1] + spectrumPart[ length-1 ];
+//  vertC[2] = distanceMod( 0.5+ pathReadBuffer1[2] + spectrumPart[ length-1 ], 0);
 
   	calcNV( vertA, vertB, vertC, normal );
   	glNormal3fv( normal );
 
-	glVertex3f( vertB[0], vertB[1], vertB[2] );
-	glVertex3f( vertA[0], vertA[1], vertA[2] );
+  	// FIXME
+//	glVertex3f( vertB[0], vertB[1], vertB[2] );
+//	glVertex3f( vertA[0], vertA[1], vertA[2] );
 
 	vertC[0] = vertA[0];
 	vertC[1] = vertA[1];
@@ -336,9 +335,9 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
 		int fixedSpectrumPartIndex = length - i;
 		path->read( pathReadBuffer1 );
 
-		vertA[0] = distanceMod( 0.5+ pathReadBuffer1[0] + spectrumPart[ fixedSpectrumPartIndex ], i);
-		vertA[1] = 				0.5+ pathReadBuffer1[1] + spectrumPart[ fixedSpectrumPartIndex ];
-	  	vertA[2] = distanceMod( 0.5+ pathReadBuffer1[2] + spectrumPart[ fixedSpectrumPartIndex ], i);
+		vertA[0] = distanceMod( 0.5 + pathReadBuffer1[0] + spectrumPart[ fixedSpectrumPartIndex ], i);
+		vertA[1] = 				0.5 + pathReadBuffer1[1] + spectrumPart[ fixedSpectrumPartIndex ];
+	  	vertA[2] = distanceMod( 0.5 + pathReadBuffer1[2] + spectrumPart[ fixedSpectrumPartIndex ], i);
 
 	  	vertB[0] = distanceMod( pathReadBuffer1[0] - spectrumPart[ fixedSpectrumPartIndex ], i);
 		vertB[1] = 				pathReadBuffer1[1] - spectrumPart[ fixedSpectrumPartIndex ];

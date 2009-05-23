@@ -64,7 +64,7 @@ namespace asdfns {
 
 		private:
 		  Context *context;
-		  
+
 			const char* photoFilename;
 
 
@@ -82,7 +82,7 @@ namespace asdfns {
 
       GLfloat buildingheight;
       int fadeintime;
-      
+
       std::vector<GLfloat> tmpVertexVector;
       std::vector<GLfloat> tmpNormalsVector;
       std::vector<GLfloat> roofsVertexVector;

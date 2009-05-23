@@ -36,6 +36,9 @@ void RingBuffer::write( float *input) {
 
 void RingBuffer::write( float *input, int offset ) {
 	offsetWritePosition = ( writePosition + offset + pages ) %pages;
+	for( int i=0; i<pageSize; i++ ) {
+		buffer[ offsetWritePosition*pageSize + i ] = input[i];
+	}
 }
 
 void RingBuffer::read( float *output) {

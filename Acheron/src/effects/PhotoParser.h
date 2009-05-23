@@ -11,7 +11,7 @@
 #include "../TimelineItemParser.h"
 #include "../AnimateableObject.h"
 
-namespace multiKa {
+namespace photo {
 
 	class PhotoParser : public TimelineItemParser {
 

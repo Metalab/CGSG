@@ -12,9 +12,9 @@
 #include <iostream>
 #include "../misc.h"
 
-using namespace multiKa;
+using namespace photo;
 
-Photo::Photo( float* startPos, float* endPos, const char* photoFilename, int startTick, int duration )
+Photo::Photo( float* startPos, float* endPos, float av, const char* photoFilename, int startTick, int duration )
 	: LinearInterpolatedAnimateable( startPos, endPos, startTick, duration )
 {
 	this->photoFilename = photoFilename;
@@ -23,6 +23,7 @@ Photo::Photo( float* startPos, float* endPos, const char* photoFilename, int sta
 
 	this->thickness = 0.1f;
 
+	this->av = av;
 	this->rPos = 0.0f;
 
 	this->colors = new HSBColors(1);
@@ -34,7 +35,8 @@ Photo::Photo( float* startPos, float* endPos, const char* photoFilename, int sta
 void Photo::createVertices() {
 		float x = 1024/100; // IMG_W
 		float y = 768/100; // IMG_H
-		float z = thickness;
+//		float z = thickness;
+		float z = 0.0;
 
 		//
 		v1[0] = -x ;
@@ -88,7 +90,7 @@ void Photo::DrawAtPosition( float* position, float factor, int tick, Context* co
 	glTranslatef( position[0], position[1], position[2] );
 
 	glRotatef( rPos, 0,1,0 );
-	rPos = rPos+0.2f;
+	rPos = rPos + av;
 	rPos = rPos>360.0f ? rPos-360.0f : rPos;
 
 	GLfloat mat_shininess[] = {50.0};
@@ -97,7 +99,7 @@ void Photo::DrawAtPosition( float* position, float factor, int tick, Context* co
 	colors->setMaterial(GL_FRONT, GL_DIFFUSE);
 	colors->setMaterial(GL_FRONT, GL_SPECULAR);
 
-
+	//glDisable(GL_CULL_FACE);
 	glEnable(GL_TEXTURE_2D);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glBindTexture(GL_TEXTURE_2D, photoTexture->id);
@@ -107,57 +109,66 @@ void Photo::DrawAtPosition( float* position, float factor, int tick, Context* co
 	glNormal3fv( normal );
 
 	glBegin(GL_QUADS);
-	glTexCoord2f(0,0); glVertex3fv(v1);
-	glTexCoord2f(1,0); glVertex3fv(v2);
-	glTexCoord2f(1,1); glVertex3fv(v3);
-	glTexCoord2f(0,1); glVertex3fv(v4);
+	glTexCoord2f(0,0);
+	glVertex3fv(v1);
+	glTexCoord2f(1,0);
+	glVertex3fv(v2);
+	glTexCoord2f(1,1);
+	glVertex3fv(v3);
+	glTexCoord2f(0,1);
+	glVertex3fv(v4);
 	glEnd();
 
 	//back
 	calcNV( v5, v6, v7, normal );
 	glBegin(GL_QUADS);
-	glTexCoord2f(1,0); glVertex3fv(v5);
-	glTexCoord2f(0,0); glVertex3fv(v6);
-	glTexCoord2f(0,1); glVertex3fv(v7);
-	glTexCoord2f(1,1); glVertex3fv(v8);
+	glTexCoord2f(1,0);
+	glVertex3fv(v5);
+	glTexCoord2f(0,0);
+	glVertex3fv(v6);
+	glTexCoord2f(0,1);
+	glVertex3fv(v7);
+	glTexCoord2f(1,1);
+	glVertex3fv(v8);
 	glEnd();
 
 	glDisable(GL_TEXTURE_2D);
+	//glEnable(GL_CULL_FACE);
 
-	glBegin(GL_QUADS);
-	//top
-	calcNV( v4, v3, v8, normal );
-	glNormal3fv( normal );
-	glVertex3fv(v4);
-	glVertex3fv(v3);
-	glVertex3fv(v8);
-	glVertex3fv(v7);
-
-	//right
-	calcNV( v2, v5, v8, normal );
-	glNormal3fv( normal );
-	glVertex3fv(v2);
-	glVertex3fv(v5);
-	glVertex3fv(v8);
-	glVertex3fv(v3);
-
-	//bottom
-	calcNV( v1, v6, v5, normal );
-	glNormal3fv( normal );
-	glVertex3fv(v1);
-	glVertex3fv(v6);
-	glVertex3fv(v5);
-	glVertex3fv(v2);
-
-	//left
-	calcNV( v6, v1, v4, normal );
-	glNormal3fv( normal );
-	glVertex3fv(v6);
-	glVertex3fv(v1);
-	glVertex3fv(v4);
-	glVertex3fv(v7);
-
-	glEnd();
+//	glBegin(GL_QUADS);
+//	//top
+//	calcNV( v4, v3, v8, normal );
+//	glNormal3fv( normal );
+//	glVertex3fv(v4);
+//	glVertex3fv(v3);
+//	glVertex3fv(v8);
+//	glVertex3fv(v7);
+//
+//	//right
+//	calcNV( v2, v5, v8, normal );
+//	glNormal3fv( normal );
+//	glVertex3fv(v2);
+//	glVertex3fv(v5);
+//	glVertex3fv(v8);
+//	glVertex3fv(v3);
+//
+//	//bottom
+//	calcNV( v1, v6, v5, normal );
+//	glNormal3fv( normal );
+//	glVertex3fv(v1);
+//	glVertex3fv(v6);
+//	glVertex3fv(v5);
+//	glVertex3fv(v2);
+//
+//	//left
+//	calcNV( v6, v1, v4, normal );
+//	glNormal3fv( normal );
+//	glVertex3fv(v6);
+//	glVertex3fv(v1);
+//	glVertex3fv(v4);
+//	glVertex3fv(v7);
+//
+//	glEnd();
 
 
 	glPopMatrix();

@@ -148,7 +148,7 @@ int main( int argc, char ** argv ) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisample);
 	}
 
-	int width = 1024, height = 768;
+	int width = 1280, height = 1024;
 	Uint32 flags = SDL_OPENGL;
 	if (fullscreen) {
 		const SDL_VideoInfo *info = SDL_GetVideoInfo();
@@ -182,7 +182,7 @@ int main( int argc, char ** argv ) {
 	timelineReader->SetParser( "TEXT", 	new TextItemParser(new Font("arialbd.ttf", 14)));
 	timelineReader->SetParser( "RING", 	new multiKa::RingParser() );
 	timelineReader->SetParser( "SPIROGRAPH", new multiKa::SpirographParser() );
-	timelineReader->SetParser( "PHOTO", new multiKa::PhotoParser() );
+	timelineReader->SetParser( "PHOTO", new photo::PhotoParser() );
 	timelineReader->SetParser( "ASDF", new asdfns::AsdfParser() );
 	timelineReader->SetParser( "ZOOM", new zoom::ZoomParser() );
 
@@ -201,7 +201,7 @@ int main( int argc, char ** argv ) {
 		unsigned int now = SDL_GetTicks();
 
 		//read new objects
-		while( (obj = timelineReader->GetNextObject(now, 5000)) ) {
+		while( (obj = timelineReader->GetNextObject(now, 1000)) ) {
 			chronos->AddObject(obj);
 		}
 

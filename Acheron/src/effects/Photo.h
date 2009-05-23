@@ -15,7 +15,7 @@
 #include "../Texture.h"
 #include "../HSBColors.h"
 
-namespace multiKa {
+namespace photo {
 
 	class Photo : public LinearInterpolatedAnimateable {
 
@@ -28,6 +28,7 @@ namespace multiKa {
 			float thickness;
 
 			float rPos;
+			float av;
 			HSBColors* colors;
 
 
@@ -37,7 +38,7 @@ namespace multiKa {
 			virtual void DrawAtPosition( float* position, float factor, int tick, Context* context );
 
 		public:
-			Photo( float* startPos, float* endPos, const char* photoFilename, int startTick, int duration );
+			Photo( float* startPos, float* endPos, float av, const char* photoFilename, int startTick, int duration );
 
 
 	};

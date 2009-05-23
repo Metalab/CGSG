@@ -24,7 +24,7 @@
 //#include "config.h"
 
 const int SPECTRUM_BANDS = 8192;
-const int LOG_SPECTRUM_BANDS = 512;
+const int LOG_SPECTRUM_BANDS = 1024;
 
 
 class AudioStuff {

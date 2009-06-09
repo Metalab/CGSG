@@ -2356,7 +2356,7 @@ int main(int argc, char *argv[])
   Vec3f eye(8.496, -8.565, 53.673);
   float yfov = 45;
   float aspect = 1;
-  float near = 0.001f; // near plane distance relative to model diagonal length
+  float near = 1.0f; // near plane distance relative to model diagonal length
   float far = 800.999390; // far plane distance (also relative)
   sdlvu.SetAllCams(modelmin, modelmax, eye, lookatcntr,
                    up, yfov, aspect, near, far);

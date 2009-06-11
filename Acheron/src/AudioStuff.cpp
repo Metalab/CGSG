@@ -51,6 +51,7 @@ AudioStuff::AudioStuff() {
 		exit(-1);
 	}
 
+	// FIXME for production
 	result = channel->setVolume(0.001);
 	if( result != FMOD_OK ){
 		printf( "FMOD error! (%d) %s\n", result, FMOD_ErrorString(result) );

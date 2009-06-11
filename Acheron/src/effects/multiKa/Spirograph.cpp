@@ -14,6 +14,10 @@
 #include <cmath>
 #include "../../extramath.h"
 
+// for debugging
+#include <iostream>
+#include <cstdlib>
+
 
 using namespace multiKa;
 
@@ -31,9 +35,12 @@ Spirograph::Spirograph( float av1, float d1, float av2, float d2, float av3, flo
 	this->av3	= av3;
 	this->d3	= d3;
 
+	this->rot = 0.0;
+
 	//fixme
 	this->length = length;
-	this->path = new RingBuffer( length, 6 );
+//	this->path = new RingBuffer( length, 6 );
+	this->path = new RingBuffer( length, 16 );
 	this->minDistance = 0.5;
 
 	this->frameCounter = 0;
@@ -41,10 +48,9 @@ Spirograph::Spirograph( float av1, float d1, float av2, float d2, float av3, flo
 
 	this->colors = new HSBColors(6);
 
-	while( this->pathLength < this->length ) {
-		precalculate();
-	}
+	this->cManipulator = new CoordinatesManipulator();
 
+	precalculate();
 }
 
 void Spirograph::draw( float spectrum[], int spectrumStart, int spectrumEnd ) {
@@ -54,85 +60,100 @@ void Spirograph::draw( float spectrum[], int spectrumStart, int spectrumEnd ) {
 
 	drawPath( spectrum, spectrumStart, spectrumEnd );
 
-	//drawArm();
+	drawArm();
 
 }
 
 void Spirograph::precalculate(){
-	glGetFloatv(GL_MODELVIEW_MATRIX, pathBuffer1);
+	glPushMatrix();
+	glLoadIdentity();
+	float tempPos[16];
 
-	// m(i,j) i spalte,j zeile
-	Vector4f m( pathBuffer1[12], pathBuffer1[13], pathBuffer1[14], 1 );
-	Matrix4f calcM =  Matrix4f::Identity();
+	//cManipulator->setPosition();
 
-	// 1st rotation: glRotatef(a1,0,1,0);
-	calcM(0,0) =  cos(a1);
-	calcM(2,0) =  sin(a1);
-	calcM(0,2) = -sin(a1);
-	calcM(2,2) =  cos(a1);
+	while( pathLength < length ) {
+		cManipulator->resetPosition();
+		cManipulator->rotate( a1, 0, 1, 0 );
+		cManipulator->translate( d1, 0.0, 0.0 );
 
-	m = calcM*m;
+		cManipulator->rotate( a2, 1, 0, 0 );
+		cManipulator->translate( 0.0, d2, 0.0 );
 
-	// 1st translation: glTranslatef(d1,0,0);
-	calcM.setIdentity();
+		cManipulator->rotate( a3, 0, 0, 1 );
+		cManipulator->translate( 0.0, 0.0, d3 );
 
-	calcM(3,0) = -d1;
-	calcM(3,1) = 0;
-	calcM(3,2) = 0;
+		a1 = fmod( (a1+av1), 360 );
+		a2 = fmod( (a2+av2), 360 );
+		a3 = fmod( (a3+av3), 360 );
 
-	m = calcM*m;
+		//cManipulator->getMatrix( pathWriteBuffer );
+		cManipulator->getPosition( tempPos );
+		pathWriteBuffer[0] = tempPos[0];
+		pathWriteBuffer[1] = tempPos[1];
+		pathWriteBuffer[2] = tempPos[2];
 
-	// 2nd rotation: glRotatef(a2,1,0,0);
-	calcM.setIdentity();
+		//path->write( pathWriteBuffer );
 
-	calcM(1,1) =  cos(a2);
-	calcM(2,1) = -sin(a2);
-	calcM(1,2) =  sin(a2);
-	calcM(2,2) =  cos(a2);
+		//pathLength++;
 
-	m = calcM*m;
+		if( pathLength > 0 ){
+				path->read(pathReadBuffer1, -1);
+				if( calcDistance(pathBuffer3[12],pathBuffer3[13],pathBuffer3[14], pathReadBuffer1[0], pathReadBuffer1[1], pathReadBuffer1[2]) > minDistance ){
+					//insert();
+					path->write( pathWriteBuffer );
+					pathLength++;
+				}
+				if( pathLength > 2 ) {
+					path->read( pathReadBuffer2, -3 );
 
-	// 2nd translation: glTranslatef(0,d2,0);
-	calcM.setIdentity();
+					vecA[0] = pathReadBuffer2[0] - pathReadBuffer1[0];
+					vecA[1] = pathReadBuffer2[1] - pathReadBuffer1[1];
+					vecA[2] = pathReadBuffer2[2] - pathReadBuffer1[2];
 
-	calcM(3,0) = 0;
-	calcM(3,1) = d2;
-	calcM(3,2) = 0;
+					normA = sqrt(vecA[0]*vecA[0]+vecA[1]*vecA[1]+vecA[2]*vecA[2]);
 
-	m = calcM*m;
+					vecA[0] = vecA[0]/normA;
+					vecA[1] = vecA[1]/normA;
+					vecA[2] = vecA[2]/normA;
 
-	// 3rd rotation: glRotatef(a3,0,0,1);
-	calcM.setIdentity();
+					// calculate and normalize b
+					vecB[0] = pathReadBuffer1[0] - pathBuffer3[0];
+					vecB[1] = pathReadBuffer1[1] - pathBuffer3[1];
+					vecB[2] = pathReadBuffer1[2] - pathBuffer3[2];
 
-	calcM(0,0) =  cos(a3);
-	calcM(1,0) = -sin(a3);
-	calcM(0,1) =  sin(a3);
-	calcM(1,1) =  cos(a3);
+					normB = sqrt(vecB[0]*vecB[0]+vecB[1]*vecB[1]+vecB[2]*vecB[2]);
 
-	m = calcM*m;
+					vecB[0] = vecB[0]/normB;
+					vecB[1] = vecB[1]/normB;
+					vecB[2] = vecB[2]/normB;
 
-	// 3rd translation: glTranslatef(0,0,d3);
-	calcM.setIdentity();
+					// calculate c
+					vecC[0] = (vecA[0]+vecB[0])/2;
+					vecC[1] = (vecA[1]+vecB[1])/2;
+					vecC[2] = (vecA[2]+vecB[2])/2;
 
-	calcM(3,0) = 0;
-	calcM(3,1) = 0;
-	calcM(3,2) = d3;
+					pathWriteBuffer[0] = pathReadBuffer1[0];
+					pathWriteBuffer[1] = pathReadBuffer1[1];
+					pathWriteBuffer[2] = pathReadBuffer1[2];
+					pathWriteBuffer[3] = vecC[0];
+					pathWriteBuffer[4] = vecC[1];
+					pathWriteBuffer[5] = vecC[2];
 
-	m = calcM*m;
+					path->write( pathWriteBuffer, -2 );
 
-	a1 = fmod( (a1+av1), 360 );
-	a2 = fmod( (a2+av2), 360 );
-	a3 = fmod( (a3+av3), 360 );
+				}
 
-	pathWriteBuffer[0] = m(0);//pathBuffer3[12];
-	pathWriteBuffer[1] = m(1);//pathBuffer3[13];
-	pathWriteBuffer[2] = m(2);//pathBuffer3[14];
+			}else{
+				//insert();
+				path->write( pathWriteBuffer );
+				pathLength++;
+			}
+	}
 
-	path->write( pathWriteBuffer );
-
-	pathLength++;
+	glPopMatrix();
 
 }
+
 
 void Spirograph::calculateNewPosition() {
 	glPushMatrix();
@@ -166,6 +187,8 @@ void Spirograph::calculateNewPosition() {
 		path->read(pathReadBuffer1, -1);
 		if( calcDistance(pathBuffer3[12],pathBuffer3[13],pathBuffer3[14], pathReadBuffer1[0], pathReadBuffer1[1], pathReadBuffer1[2]) > minDistance ){
 			insert();
+//			path->write( pathWriteBuffer );
+//			pathLength++;
 		}
 		if( pathLength > 2 ) {
 			path->read( pathReadBuffer2, -3 );
@@ -204,11 +227,12 @@ void Spirograph::calculateNewPosition() {
 			pathWriteBuffer[5] = vecC[2];
 
 			path->write( pathWriteBuffer, -2 );
-
 		}
 
 	}else{
 		insert();
+//		path->write( pathWriteBuffer );
+//		pathLength++;
 	}
 
 }
@@ -295,7 +319,11 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
 	//glColor4f(0.2, avgSpec, 1.0-avgSpec, 0.8);
 
 	glPushMatrix();
-	//glDisable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE);
+
+//	glRotatef(rot,0,1,0);
+//	rot = rot+0.1;
+//	rot = rot>360.0f?rot-360.0f:rot;
 
 	glBegin(GL_QUAD_STRIP);
 	GLfloat vertA[3], vertB[3], vertC[3];
@@ -356,7 +384,7 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
 	}
 	glEnd();
 
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 
 	glPopMatrix();
 

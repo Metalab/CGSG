@@ -15,6 +15,7 @@ USING_PART_OF_NAMESPACE_EIGEN
 #include "Base3DObject.h"
 #include "RingBuffer.h"
 #include "../../HSBColors.h"
+#include "../../CoordinatesManipulator.h"
 
 #include "../../misc.h"
 
@@ -35,14 +36,17 @@ namespace multiKa {
 		float a1, a2, a3;
 		float av1, av2, av3;
 		float d1, d2, d3;
+		float rot;
+
+		CoordinatesManipulator* cManipulator;
 
 		float vecA[3], vecB[3], vecC[3];
 		float normA, normB, normC;
 
 		RingBuffer *path;
-		float pathReadBuffer1[6];
-		float pathReadBuffer2[6];
-		float pathWriteBuffer[6];
+		float pathReadBuffer1[16];
+		float pathReadBuffer2[16];
+		float pathWriteBuffer[16];
 
 		float pathBuffer1[16], pathBuffer2[16], pathBuffer3[16];
 

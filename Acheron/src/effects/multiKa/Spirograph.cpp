@@ -60,7 +60,7 @@ void Spirograph::draw( float spectrum[], int spectrumStart, int spectrumEnd ) {
 
 	drawPath( spectrum, spectrumStart, spectrumEnd );
 
-	drawArm();
+	//drawArm();
 
 }
 
@@ -319,11 +319,11 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
 	//glColor4f(0.2, avgSpec, 1.0-avgSpec, 0.8);
 
 	glPushMatrix();
-	glDisable(GL_CULL_FACE);
+	//glDisable(GL_CULL_FACE);
 
-//	glRotatef(rot,0,1,0);
-//	rot = rot+0.1;
-//	rot = rot>360.0f?rot-360.0f:rot;
+	glRotatef(rot,0,1,0);
+	rot = rot+0.02;
+	rot = rot>360.0f?rot-360.0f:rot;
 
 	glBegin(GL_QUAD_STRIP);
 	GLfloat vertA[3], vertB[3], vertC[3];
@@ -384,7 +384,7 @@ void Spirograph::drawPath( float spectrum[], int spectrumStart, int spectrumEnd 
 	}
 	glEnd();
 
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 
 	glPopMatrix();
 

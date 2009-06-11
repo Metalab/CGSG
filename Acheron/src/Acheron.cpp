@@ -148,7 +148,7 @@ int main( int argc, char ** argv ) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisample);
 	}
 
-	int width = 1280, height = 1024;
+	int width = 1024, height = 768;
 	Uint32 flags = SDL_OPENGL;
 	if (fullscreen) {
 		const SDL_VideoInfo *info = SDL_GetVideoInfo();
@@ -167,7 +167,7 @@ int main( int argc, char ** argv ) {
 		fprintf(stderr, "Warning: Flags couldn't be set: %x\n", (surface->flags&flags)^flags);
 	}
 
-	SDL_WM_SetCaption("OpenGL demo", NULL);
+	SDL_WM_SetCaption("::Acheron::", NULL);
 
 	glewInit();
 	initGL(width, height);
@@ -217,47 +217,51 @@ int main( int argc, char ** argv ) {
 
 		chronos->Draw(now);
 
-		glPushMatrix();
-		//glLoadIdentity();
+		/*
+		 * part below draws axes, for debug only
+		 */
 
-		float mat_shininess[] = { 100.0 };
-		glMaterialfv (GL_FRONT, GL_SHININESS, mat_shininess);
-
-		float mat_ambient_diffuse[] = { 1.0, 0.0, 0.0 };
-		float mat_specular[] = { 1.0, 0.0, 0.0 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-
-		glBegin(GL_LINES);
-		glColor4f(0.0,0.0,0.0,0.5);
-		glVertex3f(-20.0,0.0,0.0);
-		glColor4f(1.0,0.0,0.0,1.0);
-		glVertex3f(20.0,0.0,0.0);
-		glEnd();
-
-		float mat_ambient_diffuse2[] = { 0.0, 1.0, 0.0 };
-		float mat_specular2[] = { 0.0, 1.0, 0.0 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse2);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
-		glBegin(GL_LINES);
-		glColor4f(0.0,0.0,0.0,0.5);
-		glVertex3f(0,-20,0);
-		glColor4f(0.0,1.0,0.0,1.0);
-		glVertex3f(0,20,0);
-		glEnd();
-
-		float mat_ambient_diffuse3[] = { 0.0, 0.0, 1.0 };
-		float mat_specular3[] = { 0.0, 0.0, 1.0 };
-		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse3);
-		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular3);
-		glBegin(GL_LINES);
-		glColor4f(0.0,0.0,0.0,0.5);
-		glVertex3f(0,0,-20);
-		glColor4f(0.0,0.0,1.0,1.0);
-		glVertex3f(0,0,20);
-		glEnd();
-
-		glPopMatrix();
+//		glPushMatrix();
+//		//glLoadIdentity();
+//
+//		float mat_shininess[] = { 100.0 };
+//		glMaterialfv (GL_FRONT, GL_SHININESS, mat_shininess);
+//
+//		float mat_ambient_diffuse[] = { 1.0, 0.0, 0.0 };
+//		float mat_specular[] = { 1.0, 0.0, 0.0 };
+//		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse);
+//		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+//
+//		glBegin(GL_LINES);
+//		glColor4f(0.0,0.0,0.0,0.5);
+//		glVertex3f(-20.0,0.0,0.0);
+//		glColor4f(1.0,0.0,0.0,1.0);
+//		glVertex3f(20.0,0.0,0.0);
+//		glEnd();
+//
+//		float mat_ambient_diffuse2[] = { 0.0, 1.0, 0.0 };
+//		float mat_specular2[] = { 0.0, 1.0, 0.0 };
+//		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse2);
+//		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular2);
+//		glBegin(GL_LINES);
+//		glColor4f(0.0,0.0,0.0,0.5);
+//		glVertex3f(0,-20,0);
+//		glColor4f(0.0,1.0,0.0,1.0);
+//		glVertex3f(0,20,0);
+//		glEnd();
+//
+//		float mat_ambient_diffuse3[] = { 0.0, 0.0, 1.0 };
+//		float mat_specular3[] = { 0.0, 0.0, 1.0 };
+//		glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_ambient_diffuse3);
+//		glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular3);
+//		glBegin(GL_LINES);
+//		glColor4f(0.0,0.0,0.0,0.5);
+//		glVertex3f(0,0,-20);
+//		glColor4f(0.0,0.0,1.0,1.0);
+//		glVertex3f(0,0,20);
+//		glEnd();
+//
+//		glPopMatrix();
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event)) {

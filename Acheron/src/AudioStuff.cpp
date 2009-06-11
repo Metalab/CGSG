@@ -32,8 +32,8 @@ AudioStuff::AudioStuff() {
 		exit(-1);
 	}
 
-//	result = system->createSound("music.mp3", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
-	result = system->createSound("/home/max/Music/testSounds/kandel_maschine_sample1.ogg", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
+	result = system->createSound("music.mp3", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
+//	result = system->createSound("/home/max/Music/testSounds/kandel_maschine_sample1.ogg", FMOD_CREATECOMPRESSEDSAMPLE, 0, &sound);
 //	result = system->createStream("/dev/dsp", FMOD_CREATESTREAM, 0, &sound);
 	if( result != FMOD_OK ){
 		printf( "FMOD error! (%d) %s\n", result, FMOD_ErrorString(result) );
@@ -52,11 +52,11 @@ AudioStuff::AudioStuff() {
 	}
 
 	// FIXME for production
-	result = channel->setVolume(0.001);
-	if( result != FMOD_OK ){
-		printf( "FMOD error! (%d) %s\n", result, FMOD_ErrorString(result) );
-		exit(-1);
-	}
+//	result = channel->setVolume(0.001);
+//	if( result != FMOD_OK ){
+//		printf( "FMOD error! (%d) %s\n", result, FMOD_ErrorString(result) );
+//		exit(-1);
+//	}
 
 
 	logSpectrumBandwidth = log2((float)SPECTRUM_BANDS)/LOG_SPECTRUM_BANDS;

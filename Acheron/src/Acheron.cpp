@@ -148,7 +148,7 @@ int main( int argc, char ** argv ) {
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, multisample);
 	}
 
-	int width = 1024, height = 768;
+	int width = 1920, height = 1100;
 	Uint32 flags = SDL_OPENGL;
 	if (fullscreen) {
 		const SDL_VideoInfo *info = SDL_GetVideoInfo();

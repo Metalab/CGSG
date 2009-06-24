@@ -68,11 +68,11 @@ const int SPEC_DEPTH = 100;
 //all vars in comparison 2 4096 spectrum_length 
 // 2x32 nice for bass only visualization  (non log spectrum)
 //32x64 nice for overall visualization (bass is not that much visible)
-const int DEF_RASTER_X = 32;//32;
-const int DEF_RASTER_Y = 32;//64;
-const int DEF_RASTER_POLY_SEARCH_DIST = 500;
+const int DEF_RASTER_X = 64;//32;
+const int DEF_RASTER_Y = 64;//64;
+const int DEF_RASTER_POLY_SEARCH_DIST = 450;
 
-int SECS_PER_IMAGE = 300;
+int SECS_PER_IMAGE = 90;
 int SECS_PER_CAMERA = 2;
 float CAM_SWITCH_VOLUME = 0.009;
 
@@ -1488,7 +1488,7 @@ void MySDLVU::Display()
 //*/
 	//DrawFloor();
   
-  //krach_console_draw();
+  krach_console_draw();
   
   EndFrame();
 
@@ -1732,8 +1732,8 @@ int MySDLVU::MyMainLoop()
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       
-      //if(krach_console_processEvents(event) == 1)
-      //  continue;
+      if(krach_console_processEvents(event) == 1)
+        continue;
       
     	SDLMod mod = SDL_GetModState();
       switch (event.type) {
@@ -2352,8 +2352,8 @@ int main(int argc, char *argv[])
   float near = 0.1f; // near plane distance relative to model diagonal length
   float far = 100.0f; // far plane distance (also relative)*/
   Vec3f up(0.002, 0.999, 0.038);
-  Vec3f lookatcntr(8.554, -8.527, 52.675);
-  Vec3f eye(8.496, -8.565, 53.673);
+  Vec3f lookatcntr(14.505, -17.658, 47.381);
+  Vec3f eye(14.496, -17.697, 48.380);
   float yfov = 45;
   float aspect = 1;
   float near = 1.0f; // near plane distance relative to model diagonal length
@@ -2362,18 +2362,29 @@ int main(int argc, char *argv[])
                    up, yfov, aspect, near, far);
 
   
-  //if(krach_console_startup() != 0) {
-  //  exit(1);
-  //}
+  if(krach_console_startup() != 0) {
+    cout << "sdl console made a boo boo" << endl;
+    exit(1);
+  }
   
   sdlvu.MyMainLoop();
-  //krach_console_shutdown();
+  krach_console_shutdown();
 	sound->release();
   fmodsystem->close();
   fmodsystem->release();
   return 0;
 }
 /* yeah 'd' dumps the camera data.
+--- CURRENT CAM PARAMS ---
+       Eye: (14.496, -17.697, 48.380)
+LookAtCntr: (14.505, -17.658, 47.381)
+    ViewUp: (0.002, 0.999, 0.038)
+     Y FOV: 44.999516
+    Aspect: 1.333334
+      Near: 0.003000
+       Far: 2402.996338
+       
+
  --- CURRENT CAM PARAMS ---
  Eye: (8.496, -8.565, 53.673)
  LookAtCntr: (8.554, -8.527, 52.675)

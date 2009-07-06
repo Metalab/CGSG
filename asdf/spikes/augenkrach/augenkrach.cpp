@@ -23,6 +23,17 @@
 #include <fmod.hpp>
 #include <fmod_errors.h>
 
+//Open Sound Control osc stuff
+#include "oscReceive.h"
+#define OSC_PORT 2345
+extern ExamplePacketListener listener;
+#include <deque>
+#include <string>
+// our queue for osc messages
+//extern deque<string> oscQ;
+deque<string> oscQ;
+//deque<const osc::ReceivedMessage> oscMsgQ;
+SDL_mutex *oscQmutex;
 /* midi works, but i have no use for it yet...
 #include "midi.h"
 #include "portmidi.h"
@@ -57,7 +68,7 @@ char *imageDIR = "imgs_adjusted/";
 //#include "/Developer/FMOD Programmers API/examples/common/wincompat.h"
 
 using namespace std;
-
+//using namespace osc;
 int tessMissedCounter=0;
 
 const int SPECTRUM_LENGTH = 8192;
@@ -72,9 +83,28 @@ const int DEF_RASTER_X = 64;//32;
 const int DEF_RASTER_Y = 64;//64;
 const int DEF_RASTER_POLY_SEARCH_DIST = 450;
 
-int SECS_PER_IMAGE = 90;
-int SECS_PER_CAMERA = 2;
+int SECS_PER_IMAGE = 300;
+int SECS_PER_CAMERA = 1;
 float CAM_SWITCH_VOLUME = 0.009;
+
+//color vars
+//FIXME   if i only knew some math.... hoehoe
+//OMG!!! colors are calculated like this: spectrumVar * 20 => / 16384
+// and spectrumvar is calculated by GetSpecValByBuilding with super strange formula  :(
+#define init_rgb_r_multiplier 1.0f;
+#define init_rgb_r_divisor 1.0f
+#define init_rgb_g_multiplier 20.0f
+#define init_rgb_g_divisor 16384.0f;
+#define init_rgb_b_multiplier 20.0f
+#define init_rgb_b_divisor 65536.0f;
+float rgb_R_multiplier = init_rgb_r_multiplier;
+float rgb_R_divisor = init_rgb_r_divisor;
+float rgb_G_multiplier = init_rgb_g_multiplier;
+float rgb_G_divisor = init_rgb_g_divisor;
+float rgb_B_multiplier = init_rgb_b_multiplier;
+float rgb_B_divisor = init_rgb_b_divisor;
+
+//s*rgb_G_multiplier/rgb_G_divisor
 
 //amount of images: (raster)
 int images_rx = 6;
@@ -132,11 +162,17 @@ class MySDLVU : public SDLVU
     bool drawGridToggle;
     bool drawSpec2GridLinesToggle;
     bool drawRoofToggle;
+    bool fullscreenToggle;
     
 //    static void processMidiMsg(void *userdata, PmEvent *buffer);
     bool updateSpectrum;
     
     bool colorShiftToggle;
+    bool changeDivisor;
+    bool changeMultiplier;
+    
+    bool cam2beatToggle;
+    
     GLfloat colorShiftR;
     GLfloat colorShiftG;
     GLfloat colorShiftB;
@@ -212,7 +248,7 @@ class MySDLVU : public SDLVU
   int currentImage;
   void loadNextImage(int next);
   
-  void UpdateColorShiftValues();
+  void UpdateColorShiftValues(bool changeDivisor, bool changeMultiplier);
 };
 
 /*void MySDLVU::dumpGeometryData(char *filename) {
@@ -328,12 +364,12 @@ MySDLVU::MySDLVU():map(imageDIR) {
         vertexArray.push_back(0);
         
         colorVertexArray.push_back(1.);
-        colorVertexArray.push_back(20/16384);
-        colorVertexArray.push_back(20/65536);
+        colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+        colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
         
         colorVertexArray.push_back(1.);
-        colorVertexArray.push_back(20/16384);
-        colorVertexArray.push_back(20/65536);
+        colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+        colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
         
         colorVertexArray.push_back(0.);
         colorVertexArray.push_back(0.);
@@ -424,14 +460,17 @@ MySDLVU::MySDLVU():map(imageDIR) {
 
   drawBuildingsToggle = true;
   drawRoofToggle = true;
+  fullscreenToggle = false;
   drawGridToggle = false;
   drawSpec2GridLinesToggle = false;
   
   colorShiftToggle = false;
+  changeDivisor = false;
+  changeMultiplier = true;
   colorShiftR = 0;
   colorShiftG = 0;
   colorShiftB = 0;
-  
+  cam2beatToggle = false;
   cameraSwitchToggle = false;
 }
 
@@ -524,12 +563,12 @@ void MySDLVU::loadNextImage(int next) {
         vertexArray.push_back(0);
         
         colorVertexArray.push_back(1.0);
-        colorVertexArray.push_back(20/16384);
-        colorVertexArray.push_back(20/65536);
+        colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+        colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
         
         colorVertexArray.push_back(1.0);
-        colorVertexArray.push_back(20/16384);
-        colorVertexArray.push_back(20/65536);
+        colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+        colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
         
         colorVertexArray.push_back(0.);
         colorVertexArray.push_back(0.);
@@ -991,7 +1030,12 @@ void MySDLVU::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
         //float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
       	float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
         //float specHeight = 0;
-        glColor3f(0.0,  0.86*MySpectrum[this->spec2raster[x*rasterY+y]]*10,  0.8*MySpectrum[this->spec2raster[x*rasterY+y]]*10);
+        float s = MySpectrum[this->spec2raster[x*rasterY+y]];
+        if(colorShiftToggle) {
+          glColor3f(0.86*s*rgb_R_multiplier/(rgb_R_divisor/1000),  0.86*s*rgb_G_multiplier/(rgb_G_divisor/1000),  0.86*s*rgb_B_multiplier/(rgb_B_divisor/1000));
+        } else {
+          glColor3f(0.0,  0.86*MySpectrum[this->spec2raster[x*rasterY+y]]*10,  0.8*MySpectrum[this->spec2raster[x*rasterY+y]]*10);
+        }
         glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
         glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
         glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
@@ -1004,6 +1048,7 @@ void MySDLVU::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
   }
 
   glEnd();
+  //cout << "fft grid(Rmd Gmd Bmd): " << rgb_R_multiplier << " "<< rgb_R_divisor << " " << rgb_G_multiplier << " " << rgb_G_divisor << " " << rgb_B_multiplier << " " << rgb_B_divisor << " " << endl;
 }
 
 
@@ -1281,8 +1326,8 @@ void MySDLVU::TessellateBuilding(Building &building) {
     //roofVertexCounter++;
     
     roofsColorVertexArray.push_back(1.0);
-    roofsColorVertexArray.push_back(20/16384);
-    roofsColorVertexArray.push_back(20/65536);
+    roofsColorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+    roofsColorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
     
     roofsNormalsArray.push_back(0);
     roofsNormalsArray.push_back(0);
@@ -1293,37 +1338,47 @@ void MySDLVU::TessellateBuilding(Building &building) {
 //  glEnd();
 }
 
-void MySDLVU::UpdateColorShiftValues() {
+void MySDLVU::UpdateColorShiftValues(bool changeDivisor, bool changeMultiplier) {
   //colorShiftToggle
+  static int rshifter = 0;
+  static int rshifter_step = 1;
+  static int gshifter = 50;
+  static int gshifter_step = 1;
+  static int bshifter = 100;
+  static int bshifter_step = 1;
+  rshifter += rshifter_step;
+  gshifter += gshifter_step;
+  bshifter += bshifter_step;
+  if (rshifter < 1) rshifter_step *= -1;
+  if (gshifter < 1) gshifter_step *= -1;
+  if (bshifter < 1) bshifter_step *= -1;
+  if (rshifter > 100) rshifter_step *= -1;
+  if (gshifter > 100) gshifter_step *= -1;
+  if (bshifter > 100) bshifter_step *= -1;
+  //float lightshift[4] = {rshifter/100.0, gshifter/100.0, bshifter/100.0, 1};
   
-  //if(MySpectrum[150] > 0.01) {
-    colorShiftR = MySpectrum[50]/MAXFLOAT * 3;
-    colorShiftG = MySpectrum[1050]/MAXFLOAT  * 3;
-    colorShiftB = MySpectrum[3050]/MAXFLOAT  * 3;
-    
-    cout << "updating colorshiftvalues ";  
-    /*
-    if(colorShiftR < 0.9) {
-      colorShiftR += 0.01;
-      cout << "r+ " << colorShiftR;
-    } else if (colorShiftR > 0.9 && colorShiftR < 1) {
-      colorShiftG += 0.01;
-      cout << "g+ "  << colorShiftG;
-    } else if (colorShiftG > 0.9 && colorShiftR > 0.9) {
-      colorShiftB += 0.01;
-      cout << "b+ "  << colorShiftB;
-    } else if (colorShiftB > 0.9 && colorShiftG > 0.9) {
-      colorShiftR = 0.0;
-      colorShiftG = 0.0;
-      colorShiftB = 0.0;
-      cout << "rESET";
-      //reset it all?
-    }
-    */
-    cout << endl;
-  //} else {
-    cout << "spec: " << MySpectrum[150] << endl;
-  //}
+  if(changeMultiplier) {
+    rgb_R_multiplier = rshifter;
+    rgb_G_multiplier = gshifter;
+    rgb_B_multiplier = bshifter;
+  }
+  if(changeDivisor) {
+    rgb_R_divisor = rshifter*gshifter*10;
+    rgb_G_divisor = gshifter*bshifter*10;
+    rgb_B_divisor = bshifter*rshifter*10;
+  }
+  //cout << "updating colorshiftvalues " << endl;
+  //cout << "rgb_R_multiplier: " << rgb_R_multiplier << endl;
+  //cout << "rgb_G_multiplier: " << rgb_G_multiplier << endl;
+  //cout << "rgb_B_multiplier: " << rgb_B_multiplier << endl;
+  /*
+  float rgb_R_multiplier = init_rgb_r_multiplier;
+  float rgb_R_divisor = init_rgb_r_divisor;
+  float rgb_G_multiplier = init_rgb_g_multiplier;
+  float rgb_G_divisor = init_rgb_g_divisor;
+  float rgb_B_multiplier = init_rgb_b_multiplier;
+  float rgb_B_divisor = init_rgb_b_divisor;
+  */
 }
 // override the display method to do your custom drawing
 void MySDLVU::Display()
@@ -1360,21 +1415,21 @@ void MySDLVU::Display()
           //myVertexArray[p+2+6] = s*100;
           //myVertexArray[p+2+9] = s*100;
           
-          myVertexColorArray[p] = 1*s;
-          myVertexColorArray[p+2] = s*20/16384;
-          myVertexColorArray[p+2+3] = s*20/65536;
-          //myVertexColorArray[p+2+6] = s*20/16384;
-          //myVertexColorArray[p+2+9] = s*20/65536;
+          myVertexColorArray[p] = s*rgb_R_multiplier/rgb_R_divisor;
+          myVertexColorArray[p+2] = s*rgb_G_multiplier/rgb_G_divisor;
+          myVertexColorArray[p+2+3] = s*rgb_B_multiplier/rgb_B_divisor;
+          //myVertexColorArray[p+2+6] = s*rgb_G_multiplier/rgb_G_divisor;
+          //myVertexColorArray[p+2+9] = s*rgb_B_multiplier/rgb_B_divisor;
           //myVertexArray[p+2] = 50 + s*100;
           //myVertexArray[p+2+3] = 50 + s*100;
 
-          myVertexColorArray[p] = s*1;
-          myVertexColorArray[p+1] = s*20/16384;
-          myVertexColorArray[p+2] = s*20/65536;
+          myVertexColorArray[p] = s*rgb_R_multiplier/rgb_R_divisor;
+          myVertexColorArray[p+1] = s*rgb_G_multiplier/rgb_G_divisor;
+          myVertexColorArray[p+2] = s*rgb_B_multiplier/rgb_B_divisor;
           
-          myVertexColorArray[p+0+3] = s*1;
-          myVertexColorArray[p+1+3] = s*20/16384;
-          myVertexColorArray[p+2+3] = s*20/65536;
+          myVertexColorArray[p+0+3] = s*rgb_R_multiplier/rgb_R_divisor;
+          myVertexColorArray[p+1+3] = s*rgb_G_multiplier/rgb_G_divisor;
+          myVertexColorArray[p+2+3] = s*rgb_B_multiplier/rgb_B_divisor;
           p+=12;
           
           myVertexArray[p+2] = 50 + s*100;
@@ -1383,10 +1438,14 @@ void MySDLVU::Display()
           //myVertexArray[p+2+3] = 50 + s*100;
 
           ///*
-          myVertexColorArray[p+1] = s*20/16384;
-          myVertexColorArray[p+2] = s*20/65536;
-          myVertexColorArray[p+1+3] = s*20/16384;
-          myVertexColorArray[p+2+3] = s*20/65536;
+          
+          
+          myVertexColorArray[p+0] = s*rgb_R_multiplier/rgb_R_divisor;
+          myVertexColorArray[p+1] = s*rgb_G_multiplier/rgb_G_divisor;
+          myVertexColorArray[p+2] = s*rgb_B_multiplier/rgb_B_divisor;
+          myVertexColorArray[p+0+3] = s*rgb_R_multiplier/rgb_R_divisor;
+          myVertexColorArray[p+1+3] = s*rgb_G_multiplier/rgb_G_divisor;
+          myVertexColorArray[p+2+3] = s*rgb_B_multiplier/rgb_B_divisor;
           //*/
         }
       }
@@ -1402,10 +1461,12 @@ void MySDLVU::Display()
           //if(r < 150000) {
             myRoofsVertexArray[r+2] = 50 + s*100;
             myRoofsColorVertexArray[r] = 1.0;
-            myRoofsColorVertexArray[r+1] = s*20/16384;
-            myRoofsColorVertexArray[r+2] = s*20/16384;
-            //myRoofsColorVertexArray[r+1] = s*20/16384;
-            //myRoofsColorVertexArray[r+2] = s*20/65536;
+            
+            //BIG FIXME
+            myRoofsColorVertexArray[r+0] = s*rgb_R_multiplier/rgb_R_divisor; //FIXME wasnt changed at runtime originally :(
+            
+            myRoofsColorVertexArray[r+1] = s*rgb_G_multiplier/rgb_G_divisor;
+            myRoofsColorVertexArray[r+2] = s*rgb_B_multiplier/rgb_B_divisor;
             r += 3;
           //} 
         }
@@ -1684,11 +1745,43 @@ int MySDLVU::MyMainLoop()
   
   int myticks = SDL_GetTicks();
   int tempColorShiftTicks = 0;
-  int colorShiftWaitTicks = 1000;
+  int colorShiftWaitTicks = 30;
+  int camTicks = SDL_GetTicks();
+  int camHopWaitTicks = 60;
+  int tempCamHopTicks = 0;
+  
   
 	while (!done) {
     //fmodsystem->update();
-        
+    
+    //process OSC messages:
+    ///*
+    SDL_mutexP(oscQmutex); // lock
+    
+    if(oscQ.size() > 0) {
+      string oldest = oscQ.front();
+      string newest = oscQ.back();
+      cout << "oldest msg: " << oldest << endl;
+      cout << "newest msg: " << newest << endl;
+      
+      if(oldest.compare("drawBuildingsToggle") == 0) {
+        drawBuildingsToggle = !drawBuildingsToggle;
+        printf("drawBuildingsToggle: %d\n",drawBuildingsToggle);
+      } else if(oldest.compare("cameraSwitchToggle") == 0) {
+        cameraSwitchToggle = !cameraSwitchToggle;
+        printf("cameraSwitchToggle: %d\n",cameraSwitchToggle);
+      } else {
+        cout << "unrecognized osc msg: '" << oldest << "'" << endl;
+      }
+      
+      
+      cout << "cleaning  queue of length: " << oscQ.size() << endl;
+      oscQ.clear();
+    }
+    
+    SDL_mutexV(oscQmutex); //unlock
+    //*/ OSC msg processing
+    
     if(updateSpectrum) {
       result = channel->getSpectrum(MySpectrum, SPECTRUM_LENGTH, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
       ERRCHECK(result);
@@ -1703,16 +1796,55 @@ int MySDLVU::MyMainLoop()
       //UpdateColorShiftValues
       tempColorShiftTicks = SDL_GetTicks();
       if(tempColorShiftTicks > myticks + colorShiftWaitTicks) {
-        UpdateColorShiftValues();
+        UpdateColorShiftValues(changeDivisor, changeMultiplier);
         myticks = SDL_GetTicks();
       }
       //int myticks = SDL_GetTicks();
     }
     
+    //broken yet...
+    if(cam2beatToggle) {
+        tempCamHopTicks = SDL_GetTicks();
+        if(tempCamHopTicks > camTicks + camHopWaitTicks) {
+          GetSDLVU()->StartPlayback("cam_record0.dat");
+          GetSDLVU()->StopRecordingPlayback();
+          camTicks = SDL_GetTicks();
+        }
+      
+        int WW = surface->w;
+        int WH = surface->h;
+      //MySpectrum[150]
+        Camera *Cam;
+        Cam = GetSDLVU()->GetCurrentCam();
+        float RelY = (Cam->Orig.y-1)/(float)WH;
+        Vec3f EyeToWorldCntr = WorldCenter - Cam->Orig;
+        float DistToCntr = EyeToWorldCntr.Length();
+        if (DistToCntr<WorldRadius) DistToCntr=WorldRadius;
+        
+        //cout << ""
+        float M[16];
+        Vec3f Trans = Cam->Z * (DistToCntr*RelY*2.0f) * (MySpectrum[150]*300);
+        Translate16fv(M,Trans.x,Trans.y,Trans.z);
+        Cam->Xform(M);
+      /*
+			void SDLVU::DriveY(int OldY, int NewY, int WH)
+      {
+        float RelY = (NewY-OldY)/(float)WH;
+
+        Vec3f EyeToWorldCntr = WorldCenter - Cam->Orig;
+        float DistToCntr = EyeToWorldCntr.Length();
+        if (DistToCntr<WorldRadius) DistToCntr=WorldRadius;
+
+        float M[16];
+        Vec3f Trans = Cam->Z * (DistToCntr*RelY*2.0f) * moveSpeed;
+        Translate16fv(M,Trans.x,Trans.y,Trans.z);
+        Cam->Xform(M);
+      }*/
+    }
     //imageswitching
     imgSwitchTime_end = clock();
     imgSwitchTime = (double(imgSwitchTime_end)-double(imgSwitchTime_start))/CLOCKS_PER_SEC;
-    if(imgSwitchTime > SECS_PER_IMAGE) {
+    if(imgSwitchTime > SECS_PER_IMAGE ) {
       loadNextImage(1);
       imgSwitchTime_start = clock();
     }
@@ -1722,7 +1854,7 @@ int MySDLVU::MyMainLoop()
     if(camSwitchTime > SECS_PER_CAMERA && cameraSwitchToggle && MySpectrum[150] > CAM_SWITCH_VOLUME) {
       //loadNextImage(1);
       cout << "cam: " << act_camera << endl;
-      act_camera += act_camera == 3 ? -3 : 1;
+      act_camera += act_camera == (GetSDLVU()->NumCams-1) ? (GetSDLVU()->NumCams-1)*-1 : 1;
       GetSDLVU()->SelectCam(act_camera);
       camSwitchTime_start = clock();
     }
@@ -1864,7 +1996,7 @@ int MySDLVU::MyMainLoop()
             
             case SDLK_y:
                 cameraSwitchToggle = !cameraSwitchToggle;
-                printf("cameraSwitchToggle: %d\n",muteToggle);
+                printf("cameraSwitchToggle: %d\n",cameraSwitchToggle);
 						break;
             
             case SDLK_e:
@@ -1885,14 +2017,58 @@ int MySDLVU::MyMainLoop()
                   printf("drawGridToggle: %d\n",drawGridToggle);
                 }
 						break;
-            case SDLK_s:
-                
-						break;
 
-            case SDLK_5:
+
+            case SDLK_s:
                 drawRoofToggle = !drawRoofToggle;
                 printf("drawRoofToggle: %d\n",drawRoofToggle);
 						break;
+						
+						case SDLK_f:
+						    //shift f to reset colors and turn off colorshifttoggling
+						    if(mod & KMOD_SHIFT) {
+  						    rgb_R_multiplier = init_rgb_r_multiplier;
+                  rgb_R_divisor = init_rgb_r_divisor;
+                  rgb_G_multiplier = init_rgb_g_multiplier;
+                  rgb_G_divisor = init_rgb_g_divisor;
+                  rgb_B_multiplier = init_rgb_b_multiplier;
+                  rgb_B_divisor = init_rgb_b_divisor;
+                  colorShiftToggle = false;  
+                } else {
+                  colorShiftToggle = !colorShiftToggle;
+                  printf("colorShiftToggle: %d\n",colorShiftToggle);
+                }
+						break;
+						
+						case SDLK_g:
+						  if(mod & KMOD_SHIFT) {
+						    changeDivisor = !changeDivisor;
+						  } else {
+						    changeMultiplier = !changeMultiplier;
+						  }
+						  printf("changeMultiplier: %d\n",changeMultiplier);
+						  printf("changeDivisor: %d\n",changeDivisor);
+            break;
+						
+						case SDLK_j:
+              cam2beatToggle = !cam2beatToggle;
+              printf("cam2beatToggle: %d\n",cam2beatToggle);
+            break;
+						
+            
+						/* // os x not supported currently?
+						case SDLK_f:
+						    SDL_Surface * theSurface = SDL_GetVideoSurface();
+                int ftret = 0;
+						    if(fullscreenToggle) {
+						      ftret = SDL_WM_ToggleFullScreen(theSurface);
+						    } else {
+						      ftret = SDL_WM_ToggleFullScreen(theSurface);
+						    }
+                fullscreenToggle = !fullscreenToggle;
+                printf("fullscreenToggle?: %d\n",ftret);
+						break;
+						*/
 
 					}
         break;
@@ -1989,6 +2165,7 @@ int main(int argc, char *argv[])
   if(develmode_fast_startup) {
     windowX = DEVELMODE_WIN_X;
     windowY = DEVELMODE_WIN_Y;
+    //myuserflags |= SDL_RESIZABLE;
     //myuserflags |= SDL_FULLSCREEN;
   } else {
     do
@@ -2287,7 +2464,7 @@ int main(int argc, char *argv[])
     channel->setMute(sdlvu.muteToggle);
   }
   sdlvu.Init("asdf",
-             50, 50, windowX, windowY, myuserflags);
+             0, 0, windowX, windowY, myuserflags);
   sdlvu.StartFPSClock();
   
   //turn off inertia!
@@ -2357,15 +2534,20 @@ int main(int argc, char *argv[])
   float yfov = 45;
   float aspect = 1;
   float near = 1.0f; // near plane distance relative to model diagonal length
-  float far = 800.999390; // far plane distance (also relative)
+  float far = 100.999390; // far plane distance (also relative)
   sdlvu.SetAllCams(modelmin, modelmax, eye, lookatcntr,
                    up, yfov, aspect, near, far);
 
   
   if(krach_console_startup() != 0) {
-    cout << "sdl console made a boo boo" << endl;
     exit(1);
   }
+  
+  ///*
+  int oscport = OSC_PORT;
+	std::cout << "listening for osc input \n";
+  listen_for_osc_packets(oscport);
+  //*/
   
   sdlvu.MyMainLoop();
   krach_console_shutdown();

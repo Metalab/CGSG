@@ -2,7 +2,7 @@
 
 #  my (borken) OS X 
 CFLAGS = -O2 -ggdb `sdl-config --cflags` -I/opt/local/include -framework OpenGL -lglut -I../../../sdlvu/viewer/ -I/Developer/FMOD\ Programmers\ API/api/inc -I/Users/scriptythekid/Downloads/portmidi/pm_common/ -Ioscpack/
-LIBS = -L../../../sdlvu/viewer/ -L/opt/local/lib `pkg-config opencv --libs` -lsdlvu `sdl-config --libs` -lSDL_image  -framework CoreAudio -lfftw3 -L/Developer/FMOD\ Programmers\ API/api/lib -lfmodex -lSDL_console -Loscpack/ -loscpack.so.1.0.2
+LIBS = -L../../../sdlvu/viewer/ -L/opt/local/lib `pkg-config opencv --libs` -lsdlvu `sdl-config --libs` -lSDL_image  -framework CoreAudio -L/Developer/FMOD\ Programmers\ API/api/lib -lfmodex -lSDL_console -Loscpack/ -loscpack.so.1.0.2
 
 
 %:%.cpp
@@ -12,7 +12,7 @@ osc_test: osc_test.cpp
 	g++ oscReceive.cpp oscmsgqueue.cpp $^ $(CFLAGS) $(LIBS) -o $@
 
 augenkrach: augenkrach.cpp
-	g++ map_augenkrach.cpp krach_console.c split.c oscReceive.cpp $^ $(CFLAGS) $(LIBS) -o $@
+	g++ map_augenkrach.cpp krach_console.c split.c oscReceive.cpp oscmsgqueue.cpp $^ $(CFLAGS) $(LIBS) -o $@
 
 mapview:mapview.cpp map.cpp
 	g++ mapview.cpp map.cpp $(LIBS) $(CFLAGS) -o $@

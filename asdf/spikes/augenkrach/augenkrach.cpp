@@ -29,11 +29,16 @@
 extern ExamplePacketListener listener;
 #include <deque>
 #include <string>
+
 // our queue for osc messages
-//extern deque<string> oscQ;
-deque<string> oscQ;
-//deque<const osc::ReceivedMessage> oscMsgQ;
-SDL_mutex *oscQmutex;
+#include "oscmsgqueue.h"
+OSCMsgQueue oscMsgQ;
+SDL_mutex *oscMsgQmutex;
+
+//using namespace std;
+
+typedef deque<OSCMsg_t>::const_iterator oscMsgQ_CI;
+
 /* midi works, but i have no use for it yet...
 #include "midi.h"
 #include "portmidi.h"
@@ -1756,30 +1761,48 @@ int MySDLVU::MyMainLoop()
     
     //process OSC messages:
     ///*
-    SDL_mutexP(oscQmutex); // lock
-    
-    if(oscQ.size() > 0) {
-      string oldest = oscQ.front();
-      string newest = oscQ.back();
-      cout << "oldest msg: " << oldest << endl;
-      cout << "newest msg: " << newest << endl;
-      
-      if(oldest.compare("drawBuildingsToggle") == 0) {
-        drawBuildingsToggle = !drawBuildingsToggle;
-        printf("drawBuildingsToggle: %d\n",drawBuildingsToggle);
-      } else if(oldest.compare("cameraSwitchToggle") == 0) {
-        cameraSwitchToggle = !cameraSwitchToggle;
-        printf("cameraSwitchToggle: %d\n",cameraSwitchToggle);
-      } else {
-        cout << "unrecognized osc msg: '" << oldest << "'" << endl;
+    SDL_mutexP(oscMsgQmutex);
+    if(oscMsgQ.msgqueue.size() > 0) {
+      oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
+      for(msgIter = oscMsgQ.msgqueue.begin(); msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
+        string addresspattern = msgIter->addresspattern;
+        string lastarg;
+        cout << "addresspattern: " << addresspattern << endl;
+        if(msgIter->arguments.size() > 0) {
+          stringvector::const_iterator arg_CI = msgIter->arguments.begin();
+          for(arg_CI = msgIter->arguments.begin(); arg_CI < msgIter->arguments.end(); arg_CI++) {
+            cout << "arg: " << *arg_CI << endl;
+            lastarg = *arg_CI;
+          }
+        }
+        ///*ugly quick hack to get happy with clicking in pure data. DELET THIS soon!
+        // /asdf/camera/select
+        // /asdf/image/next
+        // /asdf/image/prev
+        if(addresspattern.compare("/asdf/camera/select") == 0) {
+          cout << "cam No: " << atoi(lastarg.c_str()) << endl; ///buaaaargh.... c_str
+          GetSDLVU()->SelectCam(atoi(lastarg.c_str()));
+        } else if (addresspattern.compare("/asdf/image/next") == 0) {
+          loadNextImage(1);
+        } else if (addresspattern.compare("/asdf/image/prev") == 0) {
+          loadNextImage(-1);
+        } else if (addresspattern.compare("/asdf/MuteToggle") == 0) {
+          if(atoi(lastarg.c_str()) == 1) {
+            muteToggle = true;
+            updateSpectrum = false;
+          } else {
+            muteToggle = false;
+            updateSpectrum = true;
+          }
+          channel->setMute(muteToggle);
+          printf("muteToggle: %d\n",muteToggle);
+        }
+        //*/
       }
-      
-      
-      cout << "cleaning  queue of length: " << oscQ.size() << endl;
-      oscQ.clear();
+      //clear all msgs
+      oscMsgQ.msgqueue.clear();
     }
-    
-    SDL_mutexV(oscQmutex); //unlock
+    SDL_mutexV(oscMsgQmutex);
     //*/ OSC msg processing
     
     if(updateSpectrum) {

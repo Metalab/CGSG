@@ -48,6 +48,10 @@ typedef deque<OSCMsg_t>::const_iterator oscMsgQ_CI;
 */
 
 //sdl_console yeah
+#include "SDL_console/SDL_console.h"
+//extern "C" const int CONSOLE_N;
+extern "C" ConsoleInformation *Consoles[3];  /* Pointers to all the consoles */
+
 int   krach_console_startup();
 void  krach_console_shutdown();
 int   krach_console_processEvents(SDL_Event	event);
@@ -2015,6 +2019,7 @@ int MySDLVU::MyMainLoop()
                 channel->setMute(muteToggle);
                 printf("muteToggle: %d\n",muteToggle);
                 updateSpectrum = !updateSpectrum;
+                CON_Out(Consoles[0], "muteToggle: %d\n",muteToggle);
 						break;
             
             case SDLK_y:

@@ -50,7 +50,8 @@ int ExamplePacketListener::run_osc_test(int port)
             IpEndpointName( IpEndpointName::ANY_ADDRESS, port ),
             this );
                   
-    s.RunUntilSigInt();
+    //s.RunUntilSigInt();
+    s.Run();
     cout << endl;
     cout << "LISTENER is stopping" << endl;
     cout << endl;

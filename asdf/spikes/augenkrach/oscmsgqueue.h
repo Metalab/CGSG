@@ -7,16 +7,9 @@
 
 using namespace std;
 
-typedef std::vector<string> stringvector;
-
-typedef struct {
-  string addresspattern;
-  stringvector arguments;
-} OSCMsg_t;
-
 class OSCMsgQueue {
   public:
-    deque<OSCMsg_t> msgqueue;
+    deque<osc::ReceivedMessage> msgqueue;
     
     OSCMsgQueue();
     int storeMsg(osc::ReceivedMessage m);

@@ -1,8 +1,7 @@
 /*
- osc test
+ test for creating a seperate sdl thread to listen for incoming osc messages, store them and process them in our main loop
 */
-#include <sdlvu.h> // will also include GL headers
-#include "map_augenkrach.h"
+#include <SDL.h>
 
 #include <vector>
 #include <algorithm>
@@ -30,12 +29,12 @@ SDL_mutex *oscMsgQmutex;
 
 using namespace std;
 
-typedef deque<OSCMsg_t>::const_iterator oscMsgQ_CI;
+typedef deque<osc::ReceivedMessage>::const_iterator oscMsgQ_CI;
 
 int main(int argc, char *argv[])
 {
   int oscport = OSC_PORT;
-	std::cout << "listening for osc input \n";
+	std::cout << "listening for osc input (but only for string arguments!!!)\n";
   listen_for_osc_packets(oscport);
   bool done= false;
   while (!done) {
@@ -45,12 +44,13 @@ int main(int argc, char *argv[])
     if(oscMsgQ.msgqueue.size() > 0) {
       oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
       for(msgIter = oscMsgQ.msgqueue.begin(); msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
-        string addresspattern = msgIter->addresspattern;
+        string addresspattern = msgIter->AddressPattern();
         cout << "addresspattern: " << addresspattern << endl;
-        if(msgIter->arguments.size() > 0) {
-          stringvector::const_iterator arg_CI = msgIter->arguments.begin();
-          for(arg_CI = msgIter->arguments.begin(); arg_CI < msgIter->arguments.end(); arg_CI++) {
-            cout << "arg: " << *arg_CI << endl;
+        if(msgIter->ArgumentCount() > 0) {
+          osc::ReceivedMessage::const_iterator arg_CI = msgIter->ArgumentsBegin();
+          for(; arg_CI != msgIter->ArgumentsEnd(); arg_CI++) {
+            
+            cout << "string arg: " << arg_CI->AsStringUnchecked() << endl;
           }
         }
       }

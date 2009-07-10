@@ -11,6 +11,9 @@ LIBS = -L../../../sdlvu/viewer/ -L/opt/local/lib `pkg-config opencv --libs` -lsd
 osc_test: osc_test.cpp
 	g++ oscReceive.cpp oscmsgqueue.cpp $^ $(CFLAGS) $(LIBS) -o $@
 
+event_osc_test: event_osc_test.cpp
+	g++ oscReceive.cpp oscmsgqueue.cpp asdf_eventhandler.cpp $^ $(CFLAGS) $(LIBS) -o $@
+
 augenkrach: augenkrach.cpp
 	g++ map_augenkrach.cpp krach_console.c split.c oscReceive.cpp oscmsgqueue.cpp $^ $(CFLAGS) $(LIBS) -o $@
 

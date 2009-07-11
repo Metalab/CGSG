@@ -9,10 +9,10 @@ using namespace std;
 
 class OSCMsgQueue {
   public:
-    deque<osc::ReceivedMessage> msgqueue;
+    deque<osc::ReceivedMessage*> msgqueue;
     
     OSCMsgQueue();
-    int storeMsg(osc::ReceivedMessage m);
+    int storeMsg(const osc::ReceivedMessage& m);
     int size();
   private:
     

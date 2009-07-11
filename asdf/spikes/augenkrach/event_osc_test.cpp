@@ -48,13 +48,20 @@ float blafunction(osc::ReceivedMessage& oscmsg) {
     cout << "exception: " << e.what() << endl;
   }
 }
+class foobar {
+  public:
+    int trallafitti();
+};
 
+int  foobar::trallafitti() {
+  cout << "trallafitti" << endl;
+}
 //test class for asdf to pass pointer 2 member functions to the event handler
 //black magic here:
 // extends class asdfEventHandler. so we can pass function/member functions of this class
 // to  registerEvent() & registerEvent_memberfunc(),
 // which will get called if an osc msg arrives matching the registered address pattern
-class asdf : public asdfEventHandler {
+class asdf : public asdfEventHandler, public foobar {
   public:
     asdf();
     
@@ -98,7 +105,7 @@ void asdf::osc_selectcamera(osc::ReceivedMessage& oscmsg) {
   }
 }
 
-typedef deque<osc::ReceivedMessage>::const_iterator oscMsgQ_CI;
+typedef deque<osc::ReceivedMessage*>::const_iterator oscMsgQ_CI;
 
 int main(int argc, char *argv[])
 {
@@ -118,7 +125,9 @@ int main(int argc, char *argv[])
       oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
       for(msgIter = oscMsgQ.msgqueue.begin(); msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
         //try execute a registered func for msg
-        myASDF.execute((osc::ReceivedMessage&)*msgIter);
+        myASDF.execute(*msgIter);
+        (*msgIter)->freeCopiedMessageBuffer();
+        delete *msgIter;
       }
       //clear all msgs
       oscMsgQ.msgqueue.clear();

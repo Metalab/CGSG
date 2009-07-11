@@ -23,7 +23,7 @@ class asdfEventHandler {
     
     asdfEventHandler();
     
-    int execute(osc::ReceivedMessage& oscmsg);
+    int execute(osc::ReceivedMessage *oscmsg);
     int registerEvent(string pattern, void* func);
     int registerEvent_memberfunc(string pattern, void(asdfEventHandler::*memberfunc)(osc::ReceivedMessage&));
   private:

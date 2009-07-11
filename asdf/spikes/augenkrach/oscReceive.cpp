@@ -73,6 +73,7 @@ void ExamplePacketListener::ProcessMessage( const osc::ReceivedMessage& m,
           if(asdfpattern.compare(address_pattern2match) == 0) {
             //cout << "ASDF addresspattern: " << m.AddressPattern() << endl;
             SDL_mutexP(oscMsgQmutex); //lock
+            //osc::ReceivedMessage tmpMSG = m;
             oscMsgQ.storeMsg(m);
             SDL_mutexV(oscMsgQmutex); //unlock
           }

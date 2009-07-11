@@ -35,9 +35,12 @@ extern ExamplePacketListener listener;
 OSCMsgQueue oscMsgQ;
 SDL_mutex *oscMsgQmutex;
 
+
+#include "asdf_eventhandler.h"
+
 //using namespace std;
 
-typedef deque<OSCMsg_t>::const_iterator oscMsgQ_CI;
+typedef deque<osc::ReceivedMessage>::const_iterator oscMsgQ_CI;
 
 /* midi works, but i have no use for it yet...
 #include "midi.h"
@@ -77,7 +80,7 @@ char *imageDIR = "imgs_adjusted/";
 //#include "/Developer/FMOD Programmers API/examples/common/wincompat.h"
 
 using namespace std;
-//using namespace osc;
+using namespace osc;
 int tessMissedCounter=0;
 
 const int SPECTRUM_LENGTH = 8192;
@@ -148,7 +151,7 @@ void ERRCHECK(FMOD_RESULT result)
 
 
 // SDLVU subclass definition
-class MySDLVU : public SDLVU
+class MySDLVU : public SDLVU, public asdfEventHandler
 {
   ViennaMap map;
   PolygonList *polygons;
@@ -258,6 +261,25 @@ class MySDLVU : public SDLVU
   void loadNextImage(int next);
   
   void UpdateColorShiftValues(bool changeDivisor, bool changeMultiplier);
+  
+  
+  //osc triggerable functions:
+  void SelectCamera(int camNo);
+  void osc_SelectCamera(osc::ReceivedMessage& oscmsg);
+  void toggleDrawBuildings();
+  void toggleDrawBuildings(bool drawToggle);
+  void osc_toggleDrawBuildings(osc::ReceivedMessage& oscmsg);
+  void osc_DrawBuildings(osc::ReceivedMessage& oscmsg);
+  void toggleDrawSpec2GridLines();
+  void toggleDrawGrid();
+  void osc_toggleDrawSpec2GridLines(osc::ReceivedMessage& oscmsg);
+  void osc_toggleDrawGrid(osc::ReceivedMessage& oscmsg);
+  void toggleDrawRoofs();
+  void toggleDrawRoofs(bool drawToggle);
+  void osc_toggleDrawRoofs(osc::ReceivedMessage& oscmsg);
+  void osc_DrawRoofs(osc::ReceivedMessage& oscmsg);
+  void osc_loadNextImage(osc::ReceivedMessage& oscmsg);
+  void osc_loadImage(osc::ReceivedMessage& oscmsg);
 };
 
 /*void MySDLVU::dumpGeometryData(char *filename) {
@@ -481,6 +503,8 @@ MySDLVU::MySDLVU():map(imageDIR) {
   colorShiftB = 0;
   cam2beatToggle = false;
   cameraSwitchToggle = false;
+  
+  
 }
 
 
@@ -1723,6 +1747,135 @@ void MySDLVU::Motion(const SDL_MouseMotionEvent & event)
   }
 }
 
+void MySDLVU::osc_loadNextImage(osc::ReceivedMessage& oscmsg) {
+  int oscimgNo = 0;
+  try {
+    osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
+    if(oscmsg.ArgumentCount() > 0) {
+      if(arg->IsInt32()) {
+        oscimgNo = arg->AsInt32();
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  //checks arg so we dont have to here
+  loadNextImage(oscimgNo);
+}
+
+void MySDLVU::osc_loadImage(osc::ReceivedMessage& oscmsg) {
+  //2do
+  //no function implemented yet that could do this nicely
+  //loadNextImage() has to be used, which uses loadImage()
+}
+
+void MySDLVU::toggleDrawSpec2GridLines() {
+  drawSpec2GridLinesToggle = !drawSpec2GridLinesToggle;
+  printf("drawSpec2GridLinesToggle: %d\n",drawSpec2GridLinesToggle);
+}
+
+void MySDLVU::toggleDrawGrid() {
+  drawGridToggle = !drawGridToggle;
+  printf("drawGridToggle: %d\n",drawGridToggle);
+}
+
+void MySDLVU::osc_toggleDrawSpec2GridLines(osc::ReceivedMessage& oscmsg) {
+  toggleDrawSpec2GridLines();
+}
+
+void MySDLVU::osc_toggleDrawGrid(osc::ReceivedMessage& oscmsg) {
+  toggleDrawGrid();
+}
+
+
+void MySDLVU::toggleDrawRoofs() {
+  drawRoofToggle = !drawRoofToggle;
+  printf("drawRoofToggle: %d\n",drawRoofToggle);
+}
+
+void MySDLVU::toggleDrawRoofs(bool drawToggle) {
+  drawRoofToggle = drawToggle;
+  printf("drawRoofToggle: %d\n",drawRoofToggle);
+}
+
+void MySDLVU::osc_toggleDrawRoofs(osc::ReceivedMessage& oscmsg) {
+  toggleDrawRoofs();
+}
+
+void MySDLVU::osc_DrawRoofs(osc::ReceivedMessage& oscmsg) {
+  bool drawToggle;
+  int osctoggle;
+  try {
+    osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
+    if(oscmsg.ArgumentCount() > 0) {
+      if(arg->IsInt32()) {
+        osctoggle = arg->AsInt32();
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  drawToggle = osctoggle ? true : false;
+  toggleDrawRoofs(drawToggle);
+}
+
+void MySDLVU::toggleDrawBuildings() {
+  drawBuildingsToggle = !drawBuildingsToggle;
+  printf("drawBuildingsToggle: %d\n",drawBuildingsToggle);
+}
+
+void MySDLVU::toggleDrawBuildings(bool drawToggle) {
+  drawBuildingsToggle = drawToggle;
+  printf("drawBuildingsToggle: %d\n",drawBuildingsToggle);
+}
+
+void MySDLVU::osc_toggleDrawBuildings(osc::ReceivedMessage& oscmsg) {
+  toggleDrawBuildings();
+}
+
+void MySDLVU::osc_DrawBuildings(osc::ReceivedMessage& oscmsg) {
+  bool drawToggle;
+  int osctoggle;
+  try {
+    osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
+    if(oscmsg.ArgumentCount() > 0) {
+      if(arg->IsInt32()) {
+        osctoggle = arg->AsInt32();
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  drawToggle = osctoggle ? true : false;
+  toggleDrawBuildings(drawToggle);
+}
+
+
+void MySDLVU::SelectCamera(int camNo) {
+  //GetSDLVU()->NumCams-1
+  if(camNo > GetSDLVU()->NumCams-1) {
+    camNo = GetSDLVU()->NumCams-1;
+  } else if (camNo < 0) {
+    camNo = 0;
+  }
+  act_camera = camNo;
+  GetSDLVU()->SelectCam(act_camera);
+}
+
+void MySDLVU::osc_SelectCamera(osc::ReceivedMessage& oscmsg) {
+  int osccamno = 0;
+  try {
+    osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
+    if(oscmsg.ArgumentCount() > 0) {
+      if(arg->IsInt32()) {
+        osccamno = arg->AsInt32();
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  SelectCamera(osccamno);
+}
 
 // viewer main loop
 // calls display and does event processing
@@ -1760,54 +1913,44 @@ int MySDLVU::MyMainLoop()
   int tempCamHopTicks = 0;
   
   
+  registerEvent_memberfunc("/asdf/camera/select",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_SelectCamera);
+  registerEvent_memberfunc("/asdf/grid/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleDrawGrid);
+  registerEvent_memberfunc("/asdf/grid/spec2gridlines/draw",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleDrawSpec2GridLines);
+  registerEvent_memberfunc("/asdf/buildings/roofs/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleDrawRoofs);
+  registerEvent_memberfunc("/asdf/buildings/roofs/draw",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_DrawRoofs);
+  registerEvent_memberfunc("/asdf/buildings/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleDrawBuildings);
+  registerEvent_memberfunc("/asdf/buildings/draw",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_DrawBuildings);
+  registerEvent_memberfunc("/asdf/image/prevnext",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_loadNextImage);
 	while (!done) {
     //fmodsystem->update();
     
     //process OSC messages:
-    ///*
+    //process OSC messages:
     SDL_mutexP(oscMsgQmutex);
     if(oscMsgQ.msgqueue.size() > 0) {
-      oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
-      for(msgIter = oscMsgQ.msgqueue.begin(); msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
-        string addresspattern = msgIter->addresspattern;
-        string lastarg;
-        cout << "addresspattern: " << addresspattern << endl;
-        if(msgIter->arguments.size() > 0) {
-          stringvector::const_iterator arg_CI = msgIter->arguments.begin();
-          for(arg_CI = msgIter->arguments.begin(); arg_CI < msgIter->arguments.end(); arg_CI++) {
-            cout << "arg: " << *arg_CI << endl;
-            lastarg = *arg_CI;
-          }
-        }
-        ///*ugly quick hack to get happy with clicking in pure data. DELET THIS soon!
-        // /asdf/camera/select
-        // /asdf/image/next
-        // /asdf/image/prev
-        if(addresspattern.compare("/asdf/camera/select") == 0) {
-          cout << "cam No: " << atoi(lastarg.c_str()) << endl; ///buaaaargh.... c_str
-          GetSDLVU()->SelectCam(atoi(lastarg.c_str()));
-        } else if (addresspattern.compare("/asdf/image/next") == 0) {
-          loadNextImage(1);
-        } else if (addresspattern.compare("/asdf/image/prev") == 0) {
-          loadNextImage(-1);
-        } else if (addresspattern.compare("/asdf/MuteToggle") == 0) {
-          if(atoi(lastarg.c_str()) == 1) {
-            muteToggle = true;
-            updateSpectrum = false;
-          } else {
-            muteToggle = false;
-            updateSpectrum = true;
-          }
-          channel->setMute(muteToggle);
-          printf("muteToggle: %d\n",muteToggle);
-        }
-        //*/
+      //oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
+      deque<osc::ReceivedMessage*>::iterator msgIter = oscMsgQ.msgqueue.begin();
+      for(; msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
+        cout << "executing func for AddressPattern: " << (*msgIter)->AddressPattern() << endl;
+        //try execute a registered func for msg
+        execute(*msgIter);
+        (*msgIter)->freeCopiedMessageBuffer();
+        delete *msgIter;
       }
       //clear all msgs
       oscMsgQ.msgqueue.clear();
     }
     SDL_mutexV(oscMsgQmutex);
-    //*/ OSC msg processing
+    // OSC msg processing
+    
     
     if(updateSpectrum) {
       result = channel->getSpectrum(MySpectrum, SPECTRUM_LENGTH, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
@@ -2033,23 +2176,19 @@ int MySDLVU::MyMainLoop()
 						break;
 
             case SDLK_q:
-                drawBuildingsToggle = !drawBuildingsToggle;
-                printf("drawBuildingsToggle: %d\n",drawBuildingsToggle);
+                toggleDrawBuildings();
 						break;
             case SDLK_a:
                 if(mod & KMOD_SHIFT) {
-                  drawSpec2GridLinesToggle = !drawSpec2GridLinesToggle;
-                  printf("drawSpec2GridLinesToggle: %d\n",drawSpec2GridLinesToggle);
+                  toggleDrawSpec2GridLines();
                 } else {
-                  drawGridToggle = !drawGridToggle;
-                  printf("drawGridToggle: %d\n",drawGridToggle);
+                  toggleDrawGrid();
                 }
 						break;
 
 
             case SDLK_s:
-                drawRoofToggle = !drawRoofToggle;
-                printf("drawRoofToggle: %d\n",drawRoofToggle);
+                toggleDrawRoofs();
 						break;
 						
 						case SDLK_f:

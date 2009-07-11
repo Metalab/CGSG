@@ -29,7 +29,7 @@ SDL_mutex *oscMsgQmutex;
 
 using namespace std;
 
-typedef deque<osc::ReceivedMessage>::const_iterator oscMsgQ_CI;
+typedef deque<osc::ReceivedMessage*>::const_iterator oscMsgQ_CI;
 
 int main(int argc, char *argv[])
 {
@@ -44,16 +44,18 @@ int main(int argc, char *argv[])
     if(oscMsgQ.msgqueue.size() > 0) {
       oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
       for(msgIter = oscMsgQ.msgqueue.begin(); msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
-        string addresspattern = msgIter->AddressPattern();
+        string addresspattern = (*msgIter)->AddressPattern();
         cout << "addresspattern: " << addresspattern << endl;
-        if(msgIter->ArgumentCount() > 0) {
-          osc::ReceivedMessage::const_iterator arg_CI = msgIter->ArgumentsBegin();
-          for(; arg_CI != msgIter->ArgumentsEnd(); arg_CI++) {
+        if((*msgIter)->ArgumentCount() > 0) {
+          osc::ReceivedMessage::const_iterator arg_CI = (*msgIter)->ArgumentsBegin();
+          for(; arg_CI != (*msgIter)->ArgumentsEnd(); arg_CI++) {
             
-            cout << "string arg: " << arg_CI->AsStringUnchecked() << endl;
+            cout << "string arg: " << arg_CI->AsString() << endl;
           }
         }
       }
+      (*msgIter)->freeCopiedMessageBuffer();
+      delete *msgIter;
       //clear all msgs
       oscMsgQ.msgqueue.clear();
     }

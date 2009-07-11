@@ -33,6 +33,7 @@
 #include "OscTypes.h"
 #include "OscException.h"
 
+#include <cstring>
 
 namespace osc{
 
@@ -414,7 +415,10 @@ class ReceivedMessage{
 public:
     explicit ReceivedMessage( const ReceivedPacket& packet );
     explicit ReceivedMessage( const ReceivedBundleElement& bundleElement );
-
+    explicit ReceivedMessage( const ReceivedMessage&, int unused );
+    
+    void freeCopiedMessageBuffer();
+    
 	const char *AddressPattern() const { return addressPattern_; }
 
 	// Support for non-standad SuperCollider integer address patterns:
@@ -444,10 +448,11 @@ public:
     }
 
 private:
+  unsigned long size_;
 	const char *addressPattern_;
 	const char *typeTagsBegin_;
 	const char *typeTagsEnd_;
-    const char *arguments_;
+  const char *arguments_;
 };
 
 

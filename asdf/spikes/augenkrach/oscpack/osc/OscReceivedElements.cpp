@@ -523,6 +523,19 @@ ReceivedMessage::ReceivedMessage( const ReceivedBundleElement& bundleElement )
     Init( bundleElement.Contents(), bundleElement.Size() );
 }
 
+ReceivedMessage::ReceivedMessage( const ReceivedMessage& m, int unused )
+{
+  addressPattern_ = new char[m.size_];
+  memcpy((void*)addressPattern_, (void*)m.addressPattern_,m.size_);
+  size_ = m.size_;
+  typeTagsBegin_ = addressPattern_ + (m.typeTagsBegin_ - m.addressPattern_);
+  typeTagsEnd_ = addressPattern_ + (m.typeTagsEnd_ - m.addressPattern_);
+  arguments_ = addressPattern_ + (m.arguments_ - m.addressPattern_);
+}
+
+void ReceivedMessage::freeCopiedMessageBuffer() {
+  delete[] addressPattern_;
+}
 
 bool ReceivedMessage::AddressPatternIsUInt32() const
 {
@@ -544,6 +557,8 @@ void ReceivedMessage::Init( const char *message, unsigned long size )
     if( (size & 0x03L) != 0 )
         throw MalformedMessageException( "message size must be multiple of four" );
 
+    size_ = size;
+    
     const char *end = message + size;
 
     typeTagsBegin_ = FindStr4End( addressPattern_, end );

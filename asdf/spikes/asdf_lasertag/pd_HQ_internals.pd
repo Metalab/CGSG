@@ -1,4 +1,4 @@
-#N canvas -1 22 1219 732 10;
+#N canvas 31 29 1219 732 10;
 #X msg 27 64 send /asdf/MuteToggle \$1;
 #X msg 395 148 send /asdf/buildings/draw \$1;
 #X msg 395 193 send /asdf/buildings/roofs/draw \$1;
@@ -71,7 +71,7 @@
 #X obj 418 525 r buildingsRGB_G;
 #X obj 434 546 r buildingsRGB_B;
 #X obj 714 341 pack f f f;
-#X obj 740 318 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+#X obj 748 318 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
 -1 -1;
 #X obj 714 246 r fftgridRGB_R;
 #X obj 734 267 r fftgridRGB_G;
@@ -84,7 +84,7 @@
 #X floatatom 825 565 5 0 0 0 - - -;
 #X obj 748 573 select 0 1;
 #X obj 395 18 r polySearchDist;
-#X obj 930 252 r flushValuesToASDF;
+#X obj 1035 104 r flushValuesToASDF;
 #X obj 962 576 s normalizeAudio;
 #X obj 956 597 s adjust_spectrumAmps;
 #X obj 946 617 s normalizeWfixedVal;
@@ -112,9 +112,9 @@
 #X obj 981 515 s fftgridRGB_R;
 #X obj 974 535 s fftgridRGB_G;
 #X obj 969 557 s fftgridRGB_B;
-#X obj 931 294 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+#X obj 1036 146 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
 -1 -1;
-#X obj 944 272 delay 125;
+#X obj 1049 124 delay 125;
 #X connect 0 0 71 0;
 #X connect 1 0 71 0;
 #X connect 2 0 71 0;

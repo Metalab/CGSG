@@ -1,7 +1,7 @@
-#N canvas 0 22 754 522 10;
+#N canvas 506 69 754 522 10;
 #X text -25 7 asdf command & control center;
 #X obj 579 231 hradio 15 1 0 8 CameraSelect CameraSelect CameraSelect
-0 -8 0 10 -262144 -1 -1 0;
+0 -8 0 10 -262144 -1 -1 3;
 #X floatatom 579 250 5 0 0 0 - - -;
 #X obj 170 57 bng 35 250 50 0 bnextimage empty next_image 38 7 0 10
 -262144 -1 -1;
@@ -10,10 +10,10 @@
 #X obj 315 464 tgl 15 0 RoofsToggle RoofsToggle RoofsToggle 17 7 0
 10 -262144 -1 -1 1 1;
 #X obj 173 113 hsl 128 30 0 1000 0 0 polySearchDist polySearchDist
-polySearchDist -2 -8 0 10 -262144 -1 -1 1100 1;
+polySearchDist -2 -8 0 10 -262144 -1 -1 1400 1;
 #X obj 170 147 i;
 #X obj 315 419 tgl 15 0 gridToggle gridToggle gridToggle 17 7 0 10
--262144 -1 -1 1 1;
+-262144 -1 -1 0 1;
 #X obj 170 246 vsl 30 128 1 8192 1 1 gridSize_x gridSize_x gridSize_x
 0 -9 0 10 -262144 -1 -1 6200 1;
 #X obj 238 247 vsl 30 128 1 8192 1 1 gridSize_y gridSize_y gridSize_y
@@ -31,7 +31,7 @@ logarithmicSpecSize 0 -23 0 10 -262144 -1 -1 12600 1;
 #X obj -11 158 tgl 15 0 normalizeWfixedVal normalizeWfixedVal normalizeWfixedVal
 17 7 0 10 -262144 -1 -1 1 1;
 #X obj -11 245 vsl 30 128 0.0001 127 1 0 fixedNormalizeVal fixedNormalizeVal
-fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 4600 1;
+fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 5900 1;
 #X floatatom -11 383 5 0 0 0 - - -;
 #X obj -11 180 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
 -1 -1;
@@ -39,7 +39,7 @@ fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 4600 1;
 fftgrid_vertex_Multi 0 -23 0 10 -262144 -1 -1 812 1;
 #X floatatom 494 456 5 0 0 0 - - -;
 #X obj 451 315 vsl 30 128 0.0001 16384 0 1 buildings_vertex_Multi buildings_vertex_Multi
-buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 18 1;
+buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 5818 1;
 #X floatatom 451 453 5 0 0 0 - - -;
 #X obj 425 114 vsl 30 127 0.001 127 0 0 fftgridRGB_R fftgridRGB_R fftgridRGB_R
 0 -9 0 10 -262144 -1 -1 55 1;
@@ -51,30 +51,30 @@ buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 18 1;
 #X floatatom 459 248 5 0 0 0 - - -;
 #X floatatom 494 248 5 0 0 0 - - -;
 #X obj 314 114 vsl 30 127 0.001 1 0 0 buildingsRGB_R buildingsRGB_R
-buildingsRGB_R 0 -9 0 10 -262144 -1 -1 2100 1;
+buildingsRGB_R 0 -9 0 10 -262144 -1 -1 12000 1;
 #X obj 347 114 vsl 30 127 0.001 1 0 0 buildingsRGB_G buildingsRGB_G
-buildingsRGB_G 0 -23 0 10 -262144 -1 -1 2800 1;
+buildingsRGB_G 0 -23 0 10 -262144 -1 -1 5600 1;
 #X obj 382 114 vsl 30 127 0.001 1 0 0 buildingsRGB_B buildingsRGB_B
-buildingsRGB_B 0 -37 0 10 -262144 -1 -1 3000 1;
+buildingsRGB_B 0 -37 0 10 -262144 -1 -1 77 1;
 #X floatatom 314 249 5 0 0 0 - - -;
 #X floatatom 348 249 5 0 0 0 - - -;
 #X floatatom 382 248 5 0 0 0 - - -;
 #X obj 313 312 vsl 30 64 0.1 1024 0 1 buildings_minHeight buildings_minHeight
-buildings_minHeight 0 -9 0 10 -262144 -1 -1 200 1;
+buildings_minHeight 0 -9 0 10 -262144 -1 -1 82 1;
 #X floatatom 313 390 5 0 0 0 - - -;
 #X obj 77 246 vsl 30 127 0 8192 0 0 logspectrum_lowCutoff logspectrum_lowCutoff
 logspectrum_lowCutoff 0 -38 0 10 -262144 -1 -1 200 1;
 #X floatatom 77 382 5 0 0 0 - - -;
 #X obj 278 56 tgl 15 0 LTevenPolygons LTevenPolygons LTevenPolygons
-17 7 0 10 -262144 -1 -1 1 1;
+17 7 0 10 -262144 -1 -1 0 1;
 #X obj 278 15 tgl 35 0 LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE
 37 7 0 10 -262144 -1 -1 0 1;
 #X obj 352 312 vsl 30 64 0.0001 5 0 1 LT_minimumSPECvar LT_minimumSPECvar
-LT_minimumSPECvar 0 -23 0 10 -262144 -1 -1 5 1;
+LT_minimumSPECvar 0 -23 0 10 -262144 -1 -1 0 1;
 #X floatatom 352 390 5 0 0 0 - - -;
 #X floatatom 204 429 5 0 0 0 - gridsize_mul -;
 #X obj 392 313 vsl 30 64 0.0001 5 0 1 LT_activeStrokeMIN_SPECvar LT_activeStrokeMIN_SPECvar
-LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 110 1;
+LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
 #X floatatom 392 390 5 0 0 0 - - -;
 #X floatatom 170 168 5 0 0 0 - - -;
 #X obj 315 442 tgl 15 0 BuildingsToggle BuildingsToggle BuildingsToggle

@@ -126,7 +126,7 @@ float rgb_B_divisor = init_rgb_b_divisor;
 
 #define DEF_LT_BRUSH_OFFSET_X 0;
 #define DEF_LT_BRUSH_OFFSET_Y 6;
-#define DEF_LT_BRUSH_SIZE 12;
+#define DEF_LT_BRUSH_SIZE 36;
 
 bool TESS_COMBINE_needed_error_occurred = false;
 //s*rgb_G_multiplier/rgb_G_divisor
@@ -1396,8 +1396,8 @@ void mytessError(GLenum err)
 {
   if(err == GLU_TESS_NEED_COMBINE_CALLBACK) {
     TESS_COMBINE_needed_error_occurred = true;
-    cout << "tess error" << endl;
-    cout << gluErrorString(err) << endl;
+    //cout << "tess error" << endl;
+    //cout << gluErrorString(err) << endl;
   }
   
 }
@@ -2397,6 +2397,8 @@ void MySDLVU::osc_ltbattle_setbrushsize(osc::ReceivedMessage& oscmsg) {
     osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
     args >> n_brushsize >> osc::EndMessage;
     lt_brush_size = n_brushsize;
+    //fixme hardcoded value for 3200x2400 scale
+    lt_brush_size = round(lt_brush_size * 3.125);
   } catch( Exception& e ) {
     cout << "exception: " << e.what() << endl;
   }
@@ -2440,9 +2442,11 @@ void MySDLVU::setupLTbattlemode() {
   freeBuildingList(*buildings);
   //geometry_resources_freed = true;
   
-  maxX=1024;
+  //maxX=1024;
+  maxX=3200;
   minX=0;
-  maxY=768;
+  //maxY=768;
+  maxY=2400;
   minY=0;
   
 	rvc=0;
@@ -2506,6 +2510,13 @@ void MySDLVU::osc_ltbattle_recvCoords(osc::ReceivedMessage& oscmsg) {
       new_p_x = px;
       new_p_y = py;
     }
+    
+    
+    //3,125
+    //mangle / adjust up to 3200x2400 scale:
+    new_p_x = round(new_p_x*3.125);
+    new_p_y = round(new_p_y*3.125);
+    
     if(lt_int_shape.size() > 1 ) {
       int lastx = lt_int_shape.at(lt_int_shape.size()-2);
       int lasty = lt_int_shape.at(lt_int_shape.size()-1);
@@ -2865,9 +2876,11 @@ void MySDLVU::create_building_from_lasercoord() {
   minY=FLT_MAX;
 	findPlaneMaxima();*/
 	
-	maxX=1024;
+	//maxX=1024;
+  maxX=3200;
   minX=0;
-  maxY=768;
+  //maxY=768;
+  maxY=2400;
   minY=0;
 	
 	rvc=0;
@@ -4166,8 +4179,8 @@ int main(int argc, char *argv[])
   float near = 0.1f; // near plane distance relative to model diagonal length
   float far = 100.0f; // far plane distance (also relative)*/
   Vec3f up(0.0, 1.0, 0.0);
-  Vec3f lookatcntr(20.48, -16.00, 0.00);
-  Vec3f eye(20.48, -16.00, 37.00);
+  Vec3f lookatcntr(64, -48.00, 0.00);
+  Vec3f eye(64, -48.00, 117.00);
   float yfov = 45;
   float aspect = 1;
   float near = 1.0f; // near plane distance relative to model diagonal length
@@ -4197,7 +4210,11 @@ int main(int argc, char *argv[])
   return 0;
 }
 /* yeah 'd' dumps the camera data.
-HOLY GRL grail:
+3200x2400:
+Vec3f lookatcntr(64, -48.00, 0.00);
+Vec3f eye(64, -48.00, 117.00);
+
+HOLY GRL grail: (for 1024x768)
 Vec3f up(0.0, 1.0, 0.0);
 Vec3f lookatcntr(20.48, -16.00, 0.00);
 Vec3f eye(20.48, -16.00, 37.00);

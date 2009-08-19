@@ -1,8 +1,7 @@
 /*
-
-  adjust visualized fft window size and move it around with up,down,q,a, skip ahead with left, right
-
-
+  asdf
+  "austrian stadtplan demo fatal1ty"
+  
 */
 
 #include <sdlvu.h> // will also include GL headers
@@ -42,18 +41,8 @@ SDL_mutex *oscMsgQmutex;
 
 typedef deque<osc::ReceivedMessage>::const_iterator oscMsgQ_CI;
 
-/* midi works, but i have no use for it yet...
-#include "midi.h"
-#include "portmidi.h"
-
-#include "porttime.h"
-#include "pmutil.h"
-*/
-
 //sdl_console yeah
 #include "SDL_console/SDL_console.h"
-//extern "C" const int CONSOLE_N;
-extern "C" ConsoleInformation *Consoles[3];  /* Pointers to all the consoles */
 
 int   krach_console_startup();
 void  krach_console_shutdown();
@@ -76,25 +65,31 @@ int act_camera = 0;
 //image file directory:
 char *imageDIR = "imgs_adjusted/";
 
-//baergh:
-//#include "/Developer/FMOD Programmers API/examples/common/wincompat.h"
 
 using namespace std;
 using namespace osc;
 int tessMissedCounter=0;
 
 const int SPECTRUM_LENGTH = 8192;
-float MySpectrum[SPECTRUM_LENGTH];
+float linearSpectrum[SPECTRUM_LENGTH];
+float *MySpectrum = linearSpectrum;
 const int SPEC_DEPTH = 100;
+
+const int DEF_LOG_SPECTRUM_BANDS = 8192;
+
+int LOG_SPECTRUM_BANDS = DEF_LOG_SPECTRUM_BANDS;//512 in max' code
+int *conversionBoundaries;// need it variable in size  int conversionBoundaries[ LOG_SPECTRUM_BANDS *2 ];
+float *MyLogSpectrum;// need it variable in size  float MyLogSpectrum[SPECTRUM_LENGTH];
 
 //size of raster spectrum w spectrum_length gets mapped to
 //all vars in comparison 2 4096 spectrum_length 
 // 2x32 nice for bass only visualization  (non log spectrum)
 //32x64 nice for overall visualization (bass is not that much visible)
 const int DEF_RASTER_X = 64;//32;
-const int DEF_RASTER_Y = 64;//64;
+const int DEF_RASTER_Y = 128;//64; //128 for 8192 spec size
 const int DEF_RASTER_POLY_SEARCH_DIST = 450;
 
+bool AUTO_SWITCH_IMAGES = false;
 int SECS_PER_IMAGE = 300;
 int SECS_PER_CAMERA = 1;
 float CAM_SWITCH_VOLUME = 0.009;
@@ -116,6 +111,11 @@ float rgb_G_divisor = init_rgb_g_divisor;
 float rgb_B_multiplier = init_rgb_b_multiplier;
 float rgb_B_divisor = init_rgb_b_divisor;
 
+#define DEF_LT_BRUSH_OFFSET_X 0;
+#define DEF_LT_BRUSH_OFFSET_Y 6;
+#define DEF_LT_BRUSH_SIZE 36;
+
+bool TESS_COMBINE_needed_error_occurred = false;
 //s*rgb_G_multiplier/rgb_G_divisor
 
 //amount of images: (raster)
@@ -205,13 +205,16 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     GLfloat *myRoofsColorVertexArray;
     GLfloat *myNormalsArray;// = new GLubyte[buildings->size()*sizeof(GLfloat)*2];
     GLfloat *myRoofsNormalsArray;
+    GLfloat *fftgridVertexArray;
+    GLfloat *fftgridColorArray;
     
     int imgnum;
     
     int raster_x;
     int raster_y;
     float raster_poly_search_distance;
-
+    int fftgridsize;
+    
 		float colors[2048];
 		int colorIndex;
 		int tmpframecount;
@@ -225,7 +228,6 @@ class MySDLVU : public SDLVU, public asdfEventHandler
 
 		void postSoundSetup();
 
-    void DrawPoly(const Polygon &poly, float height, float specVar);
 
 		void findPlaneMaxima();
 		void findPolyMaxima(const Polygon &poly);
@@ -237,10 +239,11 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     void DrawCentroid(Building &building, float height);
     void DrawMeanCenter(Building &building, float height);
     float GetSpecValByBuilding(Building &building, float height);
-
+    float GetUnmangledSpecValByBuilding(Building &building);
 		GLfloat maxX, maxY, minX, minY;
 
 		void generateRoofVertices();
+    void generateRoofVerticesForBuilding(Building *building);
 		void TessellateBuilding(Building &building);
 		void tessVcb(void *v);
 		//void tessVcbd(GLdouble *v[3], void *user_data);
@@ -249,9 +252,9 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     void genSpec2PolyMapping(int polyCount, size_t spectrumsize, int specStartIndex);
     void genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance);
     void genSpec2RasterMapping(int rasterX, int rasertY, int specStartIndex);
-    void genSpec2RasterMapping_midStart(int rasterX, int rasterY, int specStartIndex);
+    void GenerateFFTGridVertexArray(int rasterX, int rasertY);
     void DrawGrid(int rasterX, int rasterY, int rasterZ);
-    void DrawFFTGrid(int rasterX, int rasterY, int rasterZ);
+    void UpdateFFTGridVertexArray(int rasterX, int rasterY, int rasterZ, bool manglespectrum);
     void DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY);
     void loadImage(int x, int y);
     
@@ -280,53 +283,121 @@ class MySDLVU : public SDLVU, public asdfEventHandler
   void osc_DrawRoofs(osc::ReceivedMessage& oscmsg);
   void osc_loadNextImage(osc::ReceivedMessage& oscmsg);
   void osc_loadImage(osc::ReceivedMessage& oscmsg);
+  
+  void osc_setRasterPolySearchDistance(osc::ReceivedMessage& oscmsg);
+  void osc_setRasterSize(osc::ReceivedMessage& oscmsg);
+  
+  void osc_setColorsTop(osc::ReceivedMessage& oscmsg);
+  void osc_setColorsBottom(osc::ReceivedMessage& oscmsg);
+  
+  void update_spectrum_raster_mappings();
+  
+  /*
+  * laser tag stuff
+  */
+  bool ltbattlemodetoggle;
+  void osc_toggle_ltbattlemode(osc::ReceivedMessage& oscmsg);
+  void set_ltbattlemode(bool toggle);
+  void osc_ltbattle_recvCoords(osc::ReceivedMessage& oscmsg);
+  void osc_ltbattle_cmd(osc::ReceivedMessage& oscmsg);
+  void setupLTbattlemode();
+  
+  int lt_animate_until_varray_index;
+  int lt_animate_until_roofsvarray_index;
+  std::vector<int> strokebeginindices;
+  
+  float osc_minimum_specvar;
+  void osc_set_osc_minimum_specvar(osc::ReceivedMessage& oscmsg);
+  float osc_actstroke_specvar;
+  void osc_set_osc_actstroke_specvar(osc::ReceivedMessage& oscmsg);
+  
+  std::vector<Building> lt_playback_shape;
+  
+  std::vector<int> lt_int_shape; // stores only 4 points that come in via osc.
+  
+  //std::vector<int> lt_shape; // stores the full shape with timestamps
+  typedef struct {
+    //fixme 
+    //i push maxint into the array for a move command
+    std::vector<int> *lt_shape_P;
+    std::vector<Uint32> *lt_shape_timestamps_P;
+  } t_lt_shape;
+  std::vector<t_lt_shape> lt_shapes; // collection of all captured shapes/tags
+  
+  std::vector<int> act_lt_shape;
+  std::vector<Uint32> act_lt_shape_timestamps;
+  
+  //flag if lt_battle sent "move" command new stroke begins
+  bool lt_newstroke_starting;
+  //lt_battle shape point count
+  int ltshape_pointcount;
+  
+  
+  void process_lt_coords();
+  
+  int lt_brush_offset_x;
+  int lt_brush_offset_y;
+  int lt_brush_size;
+  
+  GLfloat *last_normalv;
+  GLfloat *last_lt_v;
+  
+  void osc_ltbattle_setbrushsize(osc::ReceivedMessage& oscmsg);
+  void create_building_from_lasercoord();
+  bool geometry_resources_freed;
+  
+  void addBuilding2VertexArray(Building *building);
+  void calcCentroidForBuilding(Building*);
+  
+  void genPoly2RasterFactorForBuilding(int rasterX, int rasterY, float maxDistance, Building *thebuilding);
+  
+  void fake_init_vertexarrays();
+  void fake_osc_input();
+  
+  //new audio stuff
+  bool normalizeaudiospectrum;
+  bool convertSpectrum2Decibel;
+  bool convertSpectrum2logScale;
+  bool adjustSpectrum_freqVSamp;
+  bool normalizeaudiospectrumWithFixedValue;
+  float fixednormalizeMaxValue;
+  float logSpectrumBandwidth;
+  int logSpectrumLowCutOff;
+  void calculateConversionBoundaries();
+  void osc_setLogSpectrumSize(osc::ReceivedMessage& oscmsg);
+  void osc_toggleLogSpectrum(osc::ReceivedMessage& oscmsg);
+  void osc_setLogSpectrumLowCutoff(osc::ReceivedMessage& oscmsg);
+  void osc_toggleNormalizeSpectrum(osc::ReceivedMessage& oscmsg);
+  void osc_toggleAdjustSpectrum_freqVSamp(osc::ReceivedMessage& oscmsg);
+  void osc_toggleNormalizeWithFixedValue(osc::ReceivedMessage& oscmsg);
+  void osc_setFixedNormalizeMaxValue(osc::ReceivedMessage& oscmsg);
+  
+  //specHeight & color new approach ... dont fail me
+  float fftgrid_color_multiply_R;
+  float fftgrid_color_multiply_G;
+  float fftgrid_color_multiply_B;
+  float fftgrid_vert_multiply;
+  
+  float building_color_multiply_R;
+  float building_color_multiply_G;
+  float building_color_multiply_B;
+  float building_vert_multiply;
+  float building_min_height;
+  
+  void osc_set_fftgrid_color_rgb(osc::ReceivedMessage& oscmsg);
+  void osc_set_fftgrid_vert_multiply(osc::ReceivedMessage& oscmsg);
+  void osc_set_building_color_rgb(osc::ReceivedMessage& oscmsg);
+  void osc_set_building_vert_multiply(osc::ReceivedMessage& oscmsg);
+  void osc_set_building_min_height(osc::ReceivedMessage& oscmsg);
+  
+  bool lasertagbattlemode;
+  bool lt_even_polygons;
+  void osc_set_evenpolygons(osc::ReceivedMessage& oscmsg);
 };
 
-/*void MySDLVU::dumpGeometryData(char *filename) {
-  std::vector<float> vertexArray;
-  std::vector<float> colorVertexArray;
-  std::vector<float> roofsVertexArray;
-  std::vector<float> roofsColorVertexArray;
-  std::vector<int> buildingOffsetsinRoofsArray;
-  std::vector<float> normalsArray;
-  std::vector<float> roofsNormalsArray;
-  
-}*/
 
 void tessVcbd(void *v, void *user_data);
 
-/*
-void MySDLVU::processMidiMsg(void *userdata, PmEvent *buffer) {
-  printf("mysdlvu static function called.\n");
-  MySDLVU *thisp = (MySDLVU*)userdata;
-  //printf("midiMsg: %d\n", thisp->spectrumIndex);
-  printf("MySDLVU-midi: %08x\n", buffer->message);
-  if (Pm_MessageStatus(buffer->message) == 0x90 && Pm_MessageData2(buffer->message) != 0) {
-     printf("Note: %d\n", Pm_MessageData1(buffer->message));
-     
-     //ugly test hack:
-     //mess with the spectrum buffer:
-     int c = (int)Pm_MessageData1(buffer->message);
-     memset(&MySpectrum, 0, sizeof(float)*SPECTRUM_LENGTH);
-     
-     MySpectrum[c] = 0.5;
-//     MySpectrum[c] = 0.5 * ((16000/SPECTRUM_LENGTH / c) )  / 200;
-     thisp->updateSpectrum = false;
-   } else {
-     thisp->updateSpectrum = true;
-   }
-}
-*/
-/*
-
-startMidi(mycallback, this);
-
-
-void mycallback(void *userdata)
-{
-   Myclass *thisp = (MyClass *)userdata;
-}
-*/
 
 
 //ugly hack for instatiating map with imageDIR
@@ -334,156 +405,30 @@ MySDLVU::MySDLVU():map(imageDIR) {
 
   this->spectrumIndex =0;
   
-  //void (*p)(void *userdata);
-  /*
-  midiCallbackFuncType *proccb;
-  proccb = MySDLVU::processMidiMsg;
-  printf("calling startMidi...\n");
-  if(startMidi(proccb,this) == -1) {
-    printf("startMidi failed!\n");
-  }*/
   
   updateSpectrum = true;
 
   currentImage = 0;
-  //polygons = &map.getPolygonsOfFragment(currentImage,0);
-  //if( map.hasFragment(currentImage,0) ) printf("fragment 0,0 loaded\n");
-  //buildings = &map.getBuildingsOfFragment(currentImage,0);
   
-  
-  //int images_rx = 6;
-  //int images_ry = 10;
-  loadImage(0,0);
-  
-  int p = 0;
-  int n = 0;
-  int w = 0;
-  
-  int specVar=1;
-  int height=50;
-  
-	BuildingList::const_iterator build, buildend;
-	//PolygonList::const_iterator poly, polyend;
-	build = buildings->begin();
-	buildend = buildings->end();
-	for (;build != buildend; build++) {
-	    Polygon *poly = (Polygon*) (*build)->poly;
-	    for (int i=(*poly).size()-1, n; i >= 0; i--) {
-        n = i-1;
-        if (n < 0)
-          n = (*poly).size()-1;
-
-        p = i-2;
-        if (p <0)
-          p = (*poly).size()-2;
-        
-        w = i+1;
-        if (w > (*poly).size()-1)
-          w = 0;
-        
-        vertexArray.push_back((*poly)[i].x);
-        vertexArray.push_back(-(*poly)[i].y);
-        vertexArray.push_back(50*i +1);
-        vertexArray.push_back((*poly)[n].x);
-        vertexArray.push_back(-(*poly)[n].y);
-        vertexArray.push_back(50*i +1);
-        vertexArray.push_back((*poly)[n].x);
-        vertexArray.push_back(-(*poly)[n].y);
-        vertexArray.push_back(0);
-        vertexArray.push_back((*poly)[i].x);
-        vertexArray.push_back(-(*poly)[i].y);
-        vertexArray.push_back(0);
-        
-        colorVertexArray.push_back(1.);
-        colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
-        colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
-        
-        colorVertexArray.push_back(1.);
-        colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
-        colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
-        
-        colorVertexArray.push_back(0.);
-        colorVertexArray.push_back(0.);
-        colorVertexArray.push_back(0.);
-        
-        colorVertexArray.push_back(0.);
-        colorVertexArray.push_back(0.);
-        colorVertexArray.push_back(0.);
-        
-        //normals:
-        GLfloat *v1 = new GLfloat[3];
-        GLfloat *v2 = new GLfloat[3];
-        GLfloat *v3 = new GLfloat[3];
-        
-        v1[0] = (*poly)[i].x - (*poly)[n].x;
-        v1[1] = (-1*(*poly)[i].y) - (-1*(*poly)[n].y);
-        v1[2] = 0;
-        
-        v2[0] = (*poly)[n].x - (*poly)[p].x;
-        v2[1] = (-1*(*poly)[n].y) - (-1*(*poly)[p].y);
-        v2[2] = 0;
-        
-        //normalvektor:
-        //b,-a ("rechts" -daten sind counterclockwise (?) )
-        v1[0] *= -1;
-        
-        //normalize:
-        GLfloat length = sqrt(
-          pow(v1[0],2)+
-          pow(v1[1],2)+
-          pow(v1[2],2)
-        );
-        v1[0] /= length;
-        v1[1] /= length;
-        v1[2] /= length;
-//        v2[0] = (*poly)[i].x - (*poly)[i].x;
-//        v2[1] = (-1*(*poly)[i].y) - (-1*(*poly)[i].y);
-//        v2[2] = 0;
-        normalsArray.push_back(v1[1]);
-        normalsArray.push_back(v1[0]);
-        normalsArray.push_back(0);
-        normalsArray.push_back(v1[1]);
-        normalsArray.push_back(v1[0]);
-        normalsArray.push_back(0);
-        normalsArray.push_back(v1[1]);
-        normalsArray.push_back(v1[0]);
-        normalsArray.push_back(0);
-        normalsArray.push_back(v1[1]);
-        normalsArray.push_back(v1[0]);
-        normalsArray.push_back(0);
-        delete[] v1;
-        delete[] v2;
-        delete[] v3;
-      }
-      //p++;
-	}
-	myVertexArray = new GLfloat[vertexArray.size()];
-  copy(vertexArray.begin(), vertexArray.end(), myVertexArray);
-  
-  myVertexColorArray = new GLfloat[colorVertexArray.size()];
-  copy(colorVertexArray.begin(), colorVertexArray.end(), myVertexColorArray);
-  
-  myNormalsArray = new GLfloat[normalsArray.size()];
-  copy(normalsArray.begin(), normalsArray.end(), myNormalsArray);
-  
-  cout << "" << endl;
-  cout << "vertArray size: " << vertexArray.size() << endl;
-  cout << "" << endl;
-  
-
-  printf("have %d buildings\n", buildings->size());
-	//zHistory = (float*) malloc(polygons->size()*sizeof(float));
-	maxX=FLT_MIN;
+  ///*
+	maxX=FLT_MIN; 
 	minX=FLT_MAX;
 	maxY=FLT_MIN;
 	minY=FLT_MAX;
-
+	//*/
+  /*
+  maxX=0; 
+  minX=0;
+  maxY=0;
+  minY=0;
+  */
   spectrumDivisor = 2;
   specStartIndex = 0;
   //setupSpectrumHistory();
 
   raster_x = DEF_RASTER_X;
   raster_y = DEF_RASTER_Y;
+  fftgridsize = raster_x * raster_y;
   raster_poly_search_distance = DEF_RASTER_POLY_SEARCH_DIST;
 
   muteToggle = false;
@@ -504,7 +449,66 @@ MySDLVU::MySDLVU():map(imageDIR) {
   cam2beatToggle = false;
   cameraSwitchToggle = false;
   
+  ltbattlemodetoggle = false;
+  bool lt_newstroke_starting = true;
+  int ltshape_pointcount = 0;
+  lt_brush_offset_x = DEF_LT_BRUSH_OFFSET_X;
+  lt_brush_offset_y = DEF_LT_BRUSH_OFFSET_Y;
+  lt_brush_size = DEF_LT_BRUSH_SIZE;
+  geometry_resources_freed = false;
+  lasertagbattlemode = true;
+  lt_even_polygons = true;
   
+  this->spec2raster = new int[raster_x * raster_y];
+  
+  //int images_rx = 6;
+  //int images_ry = 10;
+  buildings = new BuildingList();
+  polygons = new PolygonList();
+  buildings->clear();
+  
+  //alloc them so we can delete[] them on demand
+  myVertexArray = new GLfloat[1];
+  myVertexColorArray = new GLfloat[1];
+  myRoofsVertexArray = new GLfloat[1];
+  myRoofsColorVertexArray = new GLfloat[1];
+  myNormalsArray = new GLfloat[1];
+  myRoofsNormalsArray = new GLfloat[1];
+  //loadImage(0,0);
+  
+  last_normalv = new GLfloat[2];
+  last_lt_v = new GLfloat[2];
+  
+  //create some buildings by faking recvd lasertag coords
+  fake_init_vertexarrays();
+  this->genSpec2RasterMapping(raster_x, raster_y,0);
+  fftgridVertexArray = new GLfloat[1];
+  fftgridColorArray = new GLfloat[1];
+  this->GenerateFFTGridVertexArray(raster_x, raster_y);
+  normalizeaudiospectrum = false;
+  adjustSpectrum_freqVSamp = false;
+  convertSpectrum2Decibel = false;
+  convertSpectrum2logScale = false;
+  normalizeaudiospectrumWithFixedValue = false;
+  fixednormalizeMaxValue = 1.0;
+  logSpectrumBandwidth = 0;
+  logSpectrumLowCutOff = 0;
+  
+  fftgrid_color_multiply_R = 1.0;
+  fftgrid_color_multiply_G = 1.0;
+  fftgrid_color_multiply_B = 1.0;
+  fftgrid_vert_multiply = 1.0;
+  
+  building_color_multiply_R = 1.0;
+  building_color_multiply_G = 1.0;
+  building_color_multiply_B = 1.0;
+  building_vert_multiply = 1.0;
+  building_min_height = 50.0;
+  
+  lt_animate_until_varray_index = 0;
+  lt_animate_until_roofsvarray_index = 0;
+  osc_minimum_specvar = 0.0;
+  osc_actstroke_specvar = 0.0;
 }
 
 
@@ -534,11 +538,6 @@ void MySDLVU::loadNextImage(int next) {
   delete[] myNormalsArray;
   delete[] myRoofsNormalsArray;
   
-  
-  //pngFile = this->PNGfileList.begin();
-  //pngFileEnd = this->PNGfileList.end();
-  //int c=0;
-  //for (;pngFile != pngFileEnd; pngFile++) {
   
   ImageFileList *filelist = &map.PNGfileList;
   
@@ -675,7 +674,7 @@ void MySDLVU::loadNextImage(int next) {
   printf("have %d buildings\n", buildings->size());
   
   
-  this->polycount = polygons->size();
+  this->polycount = buildings->size();
   delete[] this->poly2spec;
 	this->poly2spec = new int[this->polycount];
 	spectrumIndex=0;
@@ -694,6 +693,7 @@ void MySDLVU::loadNextImage(int next) {
 
   this->genPoly2RasterFactors(raster_x, raster_y, raster_poly_search_distance);
   this->genSpec2RasterMapping(raster_x, raster_y,0);
+  this->GenerateFFTGridVertexArray(raster_x, raster_y);
   
 }
 
@@ -719,11 +719,31 @@ void MySDLVU::loadImage(int x, int y) {
   }
   //polygons = &map.getPolygonsOfFragment(x,y);
   //buildings = &map.getBuildingsOfFragment(x,y);  
-  printf("have %d polys\n", polygons->size());
+  //printf("have %d polys\n", buildings->size());
   
   printf("have %d buildings\n", buildings->size());
 }
 
+float MySDLVU::GetUnmangledSpecValByBuilding(Building &building) {
+  float specVar = 0;
+  Raster2VertexList *rasterPointList = building.rasterPoints2affect;
+  VertexIndexList *verticesOrder = building.orderedVertices;
+  int maxRP = 0;
+  float maxRPdist = 0;
+  for (int i=(*rasterPointList).size()-1, n; i >= 0; i--) {
+    int rp = (*rasterPointList)[i].rasterpoint;
+    float dist = (*rasterPointList)[i].distance;
+    //float tmpspecv = MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;
+//fixme crashed here
+    float tmpspecv = MySpectrum[this->spec2raster[rp]];
+    if(tmpspecv > specVar) {
+      maxRP = rp;
+      maxRPdist = dist;
+      specVar = tmpspecv;
+    }
+  }
+  return specVar;
+}
 
 float MySDLVU::GetSpecValByBuilding(Building &building, float height) {
   float specVar = 0;
@@ -738,7 +758,8 @@ float MySDLVU::GetSpecValByBuilding(Building &building, float height) {
   //glBegin(GL_TRIANGLES);
   //glColor3f(0.,  1,  0);
   //glColor3f(1.,  (specVar*2000)/16384,  (specVar*2000)/65384);
-
+  int maxRP = 0;
+  float maxRPdist = 0;
   float specDistHeightFactor = 0;
   for (int i=(*rasterPointList).size()-1, n; i >= 0; i--) {
     int rp = (*rasterPointList)[i].rasterpoint;
@@ -750,112 +771,44 @@ float MySDLVU::GetSpecValByBuilding(Building &building, float height) {
     //specDistHeightFactor += MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;         //rvf.rasterpoint = (x*rasterX)+(y);
 
     //use maximum spectrum var of all rasterpoints for this building
+    /*
     float tmpspecv = MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;
     specVar = tmpspecv > specVar ? tmpspecv : specVar;
+    */
+    //float tmpspecv = MySpectrum[this->spec2raster[rp]];
+    float tmpspecv = MySpectrum[this->spec2raster[rp]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[rp]+1)) ) * dist / 200;
+    if(tmpspecv > specVar) {
+      maxRP = rp;
+      maxRPdist = dist;
+      specVar = tmpspecv;
+    }
   }
   //use average spectrum var of all rasterpoints for this building:
   //specVar = (specDistHeightFactor/(*rasterPointList).size());
+  //return specVar * ((16000/SPECTRUM_LENGTH * (this->spec2raster[maxRP]+1)) ) * maxRPdist / 200;
   return specVar;
-
-  //DrawPoly(*poly, 80, specVar*100);
-  //if(drawRoofToggle)
-  //  DrawRoofTesselated(building, height, specVar*100);  //*1/specVar     --> clifford je hoeher frequenz desto kleiner amplitude. energie = f*a??? FIXME  (also above! -> specVar =...)
-  ///*
-/*
-  //draw the building:
-  glBegin(GL_QUADS);
-
-  for (int i=(*poly).size()-1, n; i >= 0; i--) {
-    n = i-1;
-    if (n < 0) n = (*poly).size()-1;
-    glColor3f(1.,  (specVar*20)/16384,  (specVar*20)/65384);
-
-    glVertex3f((*poly)[i].x, -(*poly)[i].y, height+(specVar*100));
-    glVertex3f((*poly)[n].x, -(*poly)[n].y, height+(specVar*100));
-
-		//farbe "unten":
-    glColor3f(0,0,0);
-    
-    //glVertex3f((*poly)[n].x, -(*poly)[n].y, (specVar*100));
-    //glVertex3f((*poly)[i].x, -(*poly)[i].y, (specVar*100));
-    glVertex3f((*poly)[n].x, -(*poly)[n].y, 0.);
-    glVertex3f((*poly)[i].x, -(*poly)[i].y, 0.);
-
-  }
-
-  glEnd();*/
   
-  //*/
 }
 
-void MySDLVU::genSpec2RasterMapping_midStart(int rasterX, int rasterY, int specStartIndex) {
-	int rasterSize = rasterX*rasterY;
-	  float rasterIterator = (float)rasterSize / (float)SPECTRUM_LENGTH;
-
-	  //printf("rasterIterator: %d\n",rasterIterator);
-    
-	  this->spec2raster = new int[rasterSize];
-
-	  if(specStartIndex > SPECTRUM_LENGTH || specStartIndex < 0) {
-	    specStartIndex = 0;
-	  }
-	  int specIndex = specStartIndex;
-
-	  specIndex = (SPECTRUM_LENGTH/2)/2;
-
-	  //init
-	  for(int i=0;i < rasterSize; i++) {
-	      this->spec2raster[i] = specIndex; //=0
-	      //specIndex++;
-	  }
-
-	  int c=0;
-	  int specAdd = -1;
-	  //map spectrum to the whole raster:
-
-	  //rvf.rasterpoint = x * rasterY + y;
-	  for(int i=0;i < rasterX; i++) {
-
-	    for(int q=0;q < rasterY; q++) {
-	//      printf("s2r:%d\n",i*2+q);
-	//      this->spec2raster[i+q] = specIndex;
-	        int p = i * rasterY + q;
-	        //printf("p: %d\t",p);
-	        this->spec2raster[p] = specIndex;
-	        specIndex += specAdd;
-	        if(specIndex < 0) {
-	        	specIndex = 0;
-	        	specAdd = 1;
-	        }
-
-	      c++;
-	    }
-
-	  }
-
-	  for(int i=0;i < rasterSize; i++) {
-	      //printf("s2r%d:\t%d\t", i, this->spec2raster[i]);
-	    }
-
-
-	  //printf("Last specIndex:%d\n",specIndex);
-	  //printf("Last c:%d\n",c);
-	  //exit(1);
-
-	  //map spectrum to n rows of spectrum:
-}
 
 void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex) {
+  cout << "genSpec2RasterMapping BEGIN" << endl;
+  cout << "raster: " << rasterX << " / " << rasterY << endl;
+  if(rasterX < 1) {
+    rasterX = 1;
+  }
+  if(rasterY < 1) {
+    rasterY = 1;
+  }
   int rasterSize = rasterX*rasterY;
   float rasterIterator = (float)rasterSize / (float)SPECTRUM_LENGTH;
-
-  printf("rasterIterator: %f\n",rasterIterator);
   
-  //if(this->spec2raster != NULL )
-  delete[] this->spec2raster;
+  //printf("rasterIterator: %f\n",rasterIterator);
   
+//  if(this->spec2raster != NULL )
+    delete[] this->spec2raster;
   this->spec2raster = new int[rasterSize];
-
+  
   if(specStartIndex > SPECTRUM_LENGTH || specStartIndex < 0) {
     specStartIndex = 0;
   }
@@ -866,80 +819,21 @@ void MySDLVU::genSpec2RasterMapping(int rasterX, int rasterY, int specStartIndex
   //init
   for(int i=0;i < rasterSize; i++) {
       this->spec2raster[i] = specIndex; //=0
-      //specIndex++;
   }
 
-  int c=0;
-  int specAdd = -1;
+
   //map spectrum to the whole raster:
 
   //rvf.rasterpoint = x * rasterY + y;
   for(int i=0;i < rasterX; i++) {
-
     for(int q=0;q < rasterY; q++) {
-//      printf("s2r:%d\n",i*2+q);
-//      this->spec2raster[i+q] = specIndex;
-        int p = i * rasterY + q;
-        //printf("p: %d\t",p);
-        this->spec2raster[p] = specIndex;
-        specIndex++;
-        /*specIndex += specAdd;
-        if(specIndex < 0) {
-        	specIndex = 0;
-        	specAdd = 1;
-        }*/
-      c++;
+      int p = i * rasterY + q;
+      this->spec2raster[p] = specIndex;
+      specIndex++;
     }
-
   }
-
-  for(int i=0;i < rasterSize; i++) {
-      //printf("s2r%d:\t%d\t", i, this->spec2raster[i]);
-    }
-
-
-  //printf("Last specIndex:%d\n",specIndex);
-  //printf("Last c:%d\n",c);
-  //exit(1);
-
-  //map spectrum to n rows of spectrum:
 }
 
-
-//old dont use!!!
-//spectrumsize is also used as "window" size
-void MySDLVU::genSpec2PolyMapping(int polyCount, size_t spectrumsize, int specStartIndex) {
-	printf("genSpec2PolyMapping is borken & deprecated    returning!\n");
-	return;
-
-/*
-	float polyIterator = (float)polyCount / ((float)spectrumsize);
-	float tmpPolyIterator = polyIterator;
-  if(specStartIndex > SPECTRUM_LENGTH || specStartIndex < 0) {
-    specStartIndex = 0;
-  }
-	int specIndex = specStartIndex;
-
-	//printf("polyCount: %d\n",polyCount);
-	//printf("polyIter: %f\n",polyIterator);
-	printf("specStartIndex: %d\n",specStartIndex);
-
-	for(int i=0;i<polyCount;i++) {
-		poly2spec[i] = specIndex;
-		//printf("polyIter: %f\n",polyIterator);
-		//printf("i: %d specIDX: %d\n", i, specIndex);
-		if( (float) i > polyIterator ) {
-			if(specIndex > SPECTRUM_LENGTH) {
-				printf("specIndex out of bounds. setting 0\n");
-				specIndex=specStartIndex;
-			}
-			specIndex++;
-			polyIterator += tmpPolyIterator;
-		}
-	}
-*/
-	//printf("genSpec2Poly end\n");
-}
 
 
 void MySDLVU::findPolyMaxima(const Polygon &poly) {
@@ -948,23 +842,21 @@ void MySDLVU::findPolyMaxima(const Polygon &poly) {
 	for (int i=poly.size()-1, n; i >= 0; i--) {
     n = i-1;
     if (n < 0) n = poly.size()-1;
-
 		maxX = poly[i].x > maxX ? poly[i].x : maxX;
 		maxY = poly[i].y > maxY ? poly[i].y : maxY;
 		minX = poly[i].x < minX ? poly[i].x : minX;
 		minY = poly[i].y < minY ? poly[i].y : minY;
   }
-
-
 }
 
 
 void MySDLVU::findPlaneMaxima() {
-	PolygonList::const_iterator poly, polyend;
-	poly = polygons->begin();
-  polyend = polygons->end();
-	for (;poly != polyend; poly++) {
-		findPolyMaxima(**poly);
+	BuildingList::const_iterator build, buildend;
+	build = buildings->begin();
+  buildend = buildings->end();
+	for (;build != buildend; build++) {
+    Polygon *poly = (*build)->poly;
+		findPolyMaxima(*poly);
 	}
 	printf("minX: %f\n",minX);
 	printf("maxX: %f\n",maxX);
@@ -1044,54 +936,145 @@ void MySDLVU::DrawCentroid2GridLines(Building &building, float height, float gri
 }
 
 
-void MySDLVU::DrawFFTGrid(int rasterX, int rasterY, int rasterZ=0) {
-//  int maxX = this->map.fragmentImageWidth;
-//  int maxY = this->map.fragmentImageHeight;
-
-  int maxX = this->maxX;
-  int maxY = this->maxY;
-
-  int spacingX = maxX / rasterX;
-  int spacingY = maxY / rasterY;
-
-  glBegin(GL_LINES);
-
+void MySDLVU::UpdateFFTGridVertexArray(int rasterX, int rasterY, int rasterZ=0, bool manglespectrum=true) {
+  
+  float vertSpec = 0;
+  float colorSpec = 0;
+  float RcolorSpec = 0;
+  float GcolorSpec = 0;
+  float BcolorSpec = 0;
+  int p = 0;
   for(int x = 0; x < rasterX; x++) {
-
       for(int y = 0; y < rasterY; y++) {
-        //float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]]*4000;
-        //float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
-      	float specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
-        //float specHeight = 0;
-        float s = MySpectrum[this->spec2raster[x*rasterY+y]];
-        if(colorShiftToggle) {
-          glColor3f(0.86*s*rgb_R_multiplier/(rgb_R_divisor/1000),  0.86*s*rgb_G_multiplier/(rgb_G_divisor/1000),  0.86*s*rgb_B_multiplier/(rgb_B_divisor/1000));
-        } else {
-          glColor3f(0.0,  0.86*MySpectrum[this->spec2raster[x*rasterY+y]]*10,  0.8*MySpectrum[this->spec2raster[x*rasterY+y]]*10);
-        }
-        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY - spacingY, rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x+spacingX,  -y*spacingY,            rasterZ+specHeight);
-        glVertex3f( spacingX*x,           -y*spacingY,            rasterZ+specHeight);
+        
+        vertSpec = MySpectrum[this->spec2raster[x*rasterY+y]];
+        colorSpec = vertSpec;
+        
+        
+        RcolorSpec = colorSpec * fftgrid_color_multiply_R;
+        GcolorSpec = colorSpec * fftgrid_color_multiply_G;
+        BcolorSpec = colorSpec * fftgrid_color_multiply_B;
+        vertSpec *= fftgrid_vert_multiply;
+        
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        fftgridVertexArray[p+2] = vertSpec;
+        fftgridColorArray[p] = RcolorSpec;
+        fftgridColorArray[p+1] = GcolorSpec;
+        fftgridColorArray[p+2] = BcolorSpec;
+        p += 3;
+        
       }
   }
-
-  glEnd();
-  //cout << "fft grid(Rmd Gmd Bmd): " << rgb_R_multiplier << " "<< rgb_R_divisor << " " << rgb_G_multiplier << " " << rgb_G_divisor << " " << rgb_B_multiplier << " " << rgb_B_divisor << " " << endl;
 }
 
 
+void MySDLVU::GenerateFFTGridVertexArray(int rasterX, int rasterY) {
+  this->fftgridsize = rasterX * rasterY;
+  int maxX = this->maxX;
+  int maxY = this->maxY;
+  float spacingX = (float)maxX / (float)rasterX;
+  float spacingY = (float)maxY / (float)rasterY;
+  float specHeight = 0;
+  float s = 0;
+  float spacingXoverall=0;
+  float spacingYoverall=0;
+  
+  delete[] fftgridVertexArray;
+  delete[] fftgridColorArray;
+  fftgridVertexArray = new GLfloat[rasterX*rasterY*8*3];
+  fftgridColorArray = new GLfloat[rasterX*rasterY*8*3];
+  //memset(fftgridColorArray,0,sizeof(float)*rasterX*rasterY*8*3);
+  int p=0;
+  for(int x = 0; x < rasterX; x++) {
+      for(int y = 0; y < rasterY; y++) {
+        fftgridVertexArray[p] = spacingXoverall;
+        fftgridVertexArray[p+1] = -spacingYoverall;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall;
+        fftgridVertexArray[p+1] = -spacingYoverall - spacingY;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall;
+        fftgridVertexArray[p+1] = -spacingYoverall - spacingY;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall + spacingX;
+        fftgridVertexArray[p+1] = -spacingYoverall - spacingY;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall + spacingX;
+        fftgridVertexArray[p+1] = -spacingYoverall - spacingY;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall + spacingX;
+        fftgridVertexArray[p+1] = -spacingYoverall;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall + spacingX;
+        fftgridVertexArray[p+1] = -spacingYoverall;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        fftgridVertexArray[p] = spacingXoverall;
+        fftgridVertexArray[p+1] = -spacingYoverall;
+        fftgridVertexArray[p+2] = 0.0;
+        fftgridColorArray[p] = 0.0;
+        p += 3;
+        spacingYoverall += spacingY;
+      }
+      spacingYoverall=0;
+      spacingXoverall += spacingX;
+  }
+}
+
 
 void MySDLVU::DrawGrid(int rasterX, int rasterY, int rasterZ=0) {
-  int maxX = this->map.fragmentImageWidth;
-  int maxY = this->map.fragmentImageHeight;
+  float maxX = this->map.fragmentImageWidth;
+  float maxY = this->map.fragmentImageHeight;
 
-  int spacingX = maxX / rasterX;
-  int spacingY = maxY / rasterY;
+  float spacingX = maxX / rasterX;
+  float spacingY = maxY / rasterY;
 
   glBegin(GL_LINES);
   glColor3f(0.0,  0.86,  0.8);
@@ -1109,11 +1092,79 @@ void MySDLVU::DrawGrid(int rasterX, int rasterY, int rasterZ=0) {
 }
 
 
+void MySDLVU::genPoly2RasterFactorForBuilding(int rasterX, int rasterY, float maxDistance, Building *thebuilding) {
+    if(rasterX < 1) {
+      rasterX = 1;
+    }
+    if(rasterY < 1) {
+      rasterY = 1;
+    }
+    float maxX = this->maxX;//this->map.fragmentImageWidth;
+    float maxY = this->maxY;//this->map.fragmentImageHeight;
+    int rasterZ = 0;
+
+    float spacingX = maxX / rasterX;
+    float spacingY = maxY / rasterY;
+
+    //for buildings
+    ///*
+    int minRP = 0;
+    int maxRP = 0;
+
+    float dist = 0;
+    int pointCount = 0;
+
+      Building *building = thebuilding;
+      (*building).rasterPoints2affect->clear();
+      (*building).rasterPoints2affect->resize(0);
+      Raster2VertexList* rasterList = (*building).rasterPoints2affect;
+      
+      int startX =  (int) floor( (-1*building->fCenterX - (maxDistance)) / spacingX);
+      int endX =  (int) ceil( (-1*building->fCenterX + (maxDistance)) / spacingX);
+      if(endX > rasterX || endX < 0)
+        endX = rasterX;
+      if(startX < 0 || startX > rasterX)
+        startX = 0;
+
+      int startY =  (int) floor( (-1*building->fCenterY - (maxDistance)) / spacingY);
+      int endY =  (int) ceil( (-1*building->fCenterY + (maxDistance)) / spacingY);
+      if(endY > rasterY || endY < 0)
+        endY = rasterY;
+      if(startY < 0 || startY > rasterY)
+        startY = 0;
+      
+      for(int x = startX; x < endX; x++) {
+        for(int y = startY; y < endY; y++) {
+          
+          //FIXME here centroid(x) is inverted, same problem with centroid drawing and calculation!
+          dist = sqrt(pow(spacingX*x - -1*building->fCenterX,2) + pow(-spacingY*y - building->fCenterY,2) );
+          if(dist <= maxDistance) {
+            //save the raster point for this the building
+            Raster2VertexFactor rvf;
+            rvf.rasterpoint = x * rasterY + y;
+            maxRP = rvf.rasterpoint > maxRP ? rvf.rasterpoint : maxRP;
+            minRP = rvf.rasterpoint < minRP && rvf.rasterpoint > 0 ? rvf.rasterpoint : minRP;
+            //printf("rp: %d\t",rvf.rasterpoint);
+            rvf.distance = dist;
+            (*rasterList).push_back(rvf);
+            pointCount++;
+          }
+        }
+      }
+      
+    //}
+}
+
 /* search in a bounding box, near the centroid of the building, instead of the whole grid:
   lightyears faster!
 */
 void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance) {
-
+    if(rasterX < 1) {
+      rasterX = 1;
+    }
+    if(rasterY < 1) {
+      rasterY = 1;
+    }
     int maxX = this->maxX;//this->map.fragmentImageWidth;
     int maxY = this->maxY;//this->map.fragmentImageHeight;
     int rasterZ = 0;
@@ -1133,12 +1184,8 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
     int pointCount = 0;
     for (;build != buildend; build++) {
       Building *building = *build;
-//      if( (*building).rasterPoints2affect) {
-        (*building).rasterPoints2affect->clear();
-        (*building).rasterPoints2affect->resize(0);
-//        cout << "CLEARING building rasterlist" << endl;
-//      }
-//      (*building).rasterPoints2affect = new Raster2VertexList();
+      (*building).rasterPoints2affect->clear();
+      (*building).rasterPoints2affect->resize(0);
       Raster2VertexList* rasterList = (*building).rasterPoints2affect;
       
       int startX =  (int) floor( (-1*building->fCenterX - (maxDistance)) / spacingX);
@@ -1174,9 +1221,9 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
         }
       }
     }
-    printf("\nminRP: %d\t",minRP);
-    printf("maxRP: %d\t\n",maxRP);
-    printf("found %d points\n",pointCount);
+    //printf("\nminRP: %d\t",minRP);
+    //printf("maxRP: %d\t\n",maxRP);
+    //printf("found %d points\n",pointCount);
     //*/
 }
 
@@ -1223,7 +1270,10 @@ void MySDLVU::DrawMeanCenter(Building &building, float height) {
   glEnd();
 }
 
-
+//
+void MySDLVU::generateRoofVerticesForBuilding(Building *building) {
+  TessellateBuilding(*building);
+}
 
 void MySDLVU::generateRoofVertices() {
 	BuildingList::const_iterator build, buildend;
@@ -1241,10 +1291,11 @@ void MySDLVU::generateRoofVertices() {
   myRoofsNormalsArray = new GLfloat[roofsNormalsArray.size()];
   copy(roofsNormalsArray.begin(), roofsNormalsArray.end(), myRoofsNormalsArray);
   
-  cout << endl;
-  cout << "RoofsVertexArraySize: " << roofsVertexArray.size() << endl;
-  cout << "tessMissedCounter: " << tessMissedCounter << endl;
-  cout << "buildingOffsetsinRoofsArray Size: " << buildingOffsetsinRoofsArray.size() << endl;
+  //cout << endl;
+  //cout << "RoofsVertexArraySize: " << roofsVertexArray.size() << endl;
+  //cout << "tessMissedCounter: " << tessMissedCounter << endl;
+  //cout << "buildingOffsetsinRoofsArray Size: " << buildingOffsetsinRoofsArray.size() << endl;
+  
   //cout << "last buildingOffsetsinRoofsArray: " << buildingOffsetsinRoofsArray.at(buildingOffsetsinRoofsArray.size()-1) << endl;
 }
 
@@ -1258,7 +1309,19 @@ typedef struct {
 } tessUserData;
 
 //    non class function:
-void mytessError(GLenum err, void *)
+void mytessError(GLenum err)
+{
+  //fixme
+  // in a lot of images traced via openCV i get shitload of "combine callback needed" errors
+  if(err == GLU_TESS_NEED_COMBINE_CALLBACK) {
+    TESS_COMBINE_needed_error_occurred = true;
+    //cout << "tess error" << endl;
+    //cout << gluErrorString(err) << endl;
+  }
+  
+}
+
+void mytessErrorData(GLenum err, void *error_data)
 {
   gluErrorString(err);
 }
@@ -1271,6 +1334,9 @@ void mytessEdgeFlagCB(GLboolean flag ) {
 	//printf("flagCB: %d\n",flag);
 }
 
+void mytessEnd(GLenum type) {
+	//printf("flagCB: %d\n",flag);
+}
 
 void tessVcbd(void *v, void *user_data) { //USE WITH GLU_TESS_VERTEX_DATA
   tessUserData *tud = (tessUserData*) user_data;
@@ -1317,6 +1383,8 @@ void MySDLVU::TessellateBuilding(Building &building) {
   gluTessCallback(tess,  GLU_TESS_EDGE_FLAG, (GLvoid(*)())&mytessEdgeFlagCB); //forces generation of GL_TRIANGLES only  yeah!
 	gluTessCallback(tess, GLU_TESS_VERTEX_DATA,	(GLvoid (*)())&tessVcbd);
 	//gluTessCallback(tess, GLU_TESS_END,		(GLvoid(*)())&glEnd);
+	gluTessCallback(tess, GLU_TESS_END,		(GLvoid(*)())&mytessEnd);
+	gluTessCallback(tess, GLU_TESS_ERROR,	(GLvoid (*)())&mytessError);
 
 	rvc = 0; // for tessVcb
   tessUserData polyData;
@@ -1325,7 +1393,9 @@ void MySDLVU::TessellateBuilding(Building &building) {
   polyData.vIndex = 0;
   polyData.polySize = poly->size();
 	//gluTessBeginPolygon (tess, (GLvoid*)&poly); //&poly = USER_DATA
+  //cout << "gluTessBeginPolygon" << endl;
   gluTessBeginPolygon (tess, (GLvoid*)&polyData); //&poly = USER_DATA
+  //cout << "gluTessBeginContour" << endl;
 	gluTessBeginContour (tess);
 
 	for (int i=(*poly).size()-1, n; i >= 0; i--) {
@@ -1333,31 +1403,23 @@ void MySDLVU::TessellateBuilding(Building &building) {
     if (n < 0) n = (*poly).size()-1;
 		gluTessVertex (tess, (GLdouble*)&tmppd[4*i], &tmppd[4*i]);
 	}
+	//cout << "gluTessEndContour" << endl;
 	gluTessEndContour (tess);
+	//cout << "gluEndPolygon" << endl;
 	gluEndPolygon (tess);
 
 	gluDeleteTess(tess);
 
 	free(tmppd);
 	
-	//Polygon *poly = (Polygon*) building.poly;
   VertexIndexList *verticesOrder = building.orderedVertices;
-  //if ((*poly).size() < 3) return;
-
-  //glBegin(GL_TRIANGLES);
-  //glColor3f(0.,  1,  0);
-  //glColor3f(1.,  (specVar/100*20)/16384,  (specVar/100*20)/65384);
   
   for (int i=(*verticesOrder).size()-1, n; i >= 0; i--) {
-  //for (int i=0; i < (*verticesOrder).size(); i++) {
-    //glVertex3f((*poly)[(*verticesOrder)[i]].x, -(*poly)[(*verticesOrder)[i]].y, height+(specVar));
     
     roofsVertexArray.push_back((*poly)[(*verticesOrder)[i]].x);
     roofsVertexArray.push_back(-(*poly)[(*verticesOrder)[i]].y);
     roofsVertexArray.push_back(50);
 
-    //roofVertexCounter++;
-    
     roofsColorVertexArray.push_back(1.0);
     roofsColorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
     roofsColorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
@@ -1366,9 +1428,6 @@ void MySDLVU::TessellateBuilding(Building &building) {
     roofsNormalsArray.push_back(0);
     roofsNormalsArray.push_back(1);
   }
-  //buildingOffsetsinRoofsArray.push_back(roofVertexCounter);
-//  cout << "buildingoffsetpushback: " << roofVertexCounter << endl;
-//  glEnd();
 }
 
 void MySDLVU::UpdateColorShiftValues(bool changeDivisor, bool changeMultiplier) {
@@ -1404,131 +1463,218 @@ void MySDLVU::UpdateColorShiftValues(bool changeDivisor, bool changeMultiplier) 
   //cout << "rgb_R_multiplier: " << rgb_R_multiplier << endl;
   //cout << "rgb_G_multiplier: " << rgb_G_multiplier << endl;
   //cout << "rgb_B_multiplier: " << rgb_B_multiplier << endl;
-  /*
-  float rgb_R_multiplier = init_rgb_r_multiplier;
-  float rgb_R_divisor = init_rgb_r_divisor;
-  float rgb_G_multiplier = init_rgb_g_multiplier;
-  float rgb_G_divisor = init_rgb_g_divisor;
-  float rgb_B_multiplier = init_rgb_b_multiplier;
-  float rgb_B_divisor = init_rgb_b_divisor;
-  */
 }
 // override the display method to do your custom drawing
 void MySDLVU::Display()
 { 
-  
-
   int p=0;
   int r=0;
+  int q=0;
   int buildC = 0;
-	BuildingList::const_iterator build, buildend;
+	BuildingList::iterator build, buildend;
 	//PolygonList::const_iterator poly, polyend;
 	build = buildings->begin();
 	buildend = buildings->end();
   float s = 0;
+  float colorSpec = 0;
+  float vertSpec = 0;
+  float RcolorSpec = 0;
+  float GcolorSpec = 0;
+  float BcolorSpec = 0;
+  float act_RcolorSpec = 0;
+  float act_GcolorSpec = 0;
+  float act_BcolorSpec = 0;
+  float act_vertSpec = 0;
+  float last_RcolorSpec = 0;
+  float last_GcolorSpec = 0;
+  float last_BcolorSpec = 0;
+  float last_vertSpec = 0;
+  
   int n=0;
 	///*
+  float lastSpecVar = 0;
+  float act_specvar;
+  float act_specvar2;
+  bool stroketoright=true;
+  Building *prevBuild;
+  if(buildings->size() > 0) {
+    
+    lastSpecVar = GetUnmangledSpecValByBuilding(**build);
+    
+    prevBuild = *build;
+  }
+  //cout << "s: ";
+  
 	for (;build != buildend; build++) {
-      //DrawCentroid(**build, 100); //slow debug func
-      //DrawMeanCenter(**build, 100);
-      s = GetSpecValByBuilding(**build, 50);
-      //s=0;
-      if(drawBuildingsToggle) {
-        Polygon *blah = (*build)->poly;
-        for (int i=(*blah).size()-1; i >= 0; i--) {
-          n=i-1;
-          i=i<0?(*blah).size()-1:i;
-          //myVertexArray[p] = ((*blah)[i].x*0.1) + ( s*100);
-          //myVertexArray[p] = (vertexArray[p]) + ( s);
-          //myVertexArray[p+3] = (vertexArray[p+3]) + ( s);
-          //myVertexArray[p+1] = (vertexArray[p+1]) + s;
-          //myVertexArray[p+1+3] = (vertexArray[p+1+3]) + s;
-          myVertexArray[p+2] = 50 + s*100;
-          myVertexArray[p+2+3] = 50 + s*100;
-          //myVertexArray[p+2+6] = s*100;
-          //myVertexArray[p+2+9] = s*100;
-          
-          myVertexColorArray[p] = s*rgb_R_multiplier/rgb_R_divisor;
-          myVertexColorArray[p+2] = s*rgb_G_multiplier/rgb_G_divisor;
-          myVertexColorArray[p+2+3] = s*rgb_B_multiplier/rgb_B_divisor;
-          //myVertexColorArray[p+2+6] = s*rgb_G_multiplier/rgb_G_divisor;
-          //myVertexColorArray[p+2+9] = s*rgb_B_multiplier/rgb_B_divisor;
-          //myVertexArray[p+2] = 50 + s*100;
-          //myVertexArray[p+2+3] = 50 + s*100;
-
-          myVertexColorArray[p] = s*rgb_R_multiplier/rgb_R_divisor;
-          myVertexColorArray[p+1] = s*rgb_G_multiplier/rgb_G_divisor;
-          myVertexColorArray[p+2] = s*rgb_B_multiplier/rgb_B_divisor;
-          
-          myVertexColorArray[p+0+3] = s*rgb_R_multiplier/rgb_R_divisor;
-          myVertexColorArray[p+1+3] = s*rgb_G_multiplier/rgb_G_divisor;
-          myVertexColorArray[p+2+3] = s*rgb_B_multiplier/rgb_B_divisor;
-          p+=12;
-          
-          myVertexArray[p+2] = 50 + s*100;
-          myVertexArray[p+2+3] = 50 + s*100;
-          //myVertexArray[p+2] = 50 + s*100;
-          //myVertexArray[p+2+3] = 50 + s*100;
-
-          ///*
-          
-          
-          myVertexColorArray[p+0] = s*rgb_R_multiplier/rgb_R_divisor;
-          myVertexColorArray[p+1] = s*rgb_G_multiplier/rgb_G_divisor;
-          myVertexColorArray[p+2] = s*rgb_B_multiplier/rgb_B_divisor;
-          myVertexColorArray[p+0+3] = s*rgb_R_multiplier/rgb_R_divisor;
-          myVertexColorArray[p+1+3] = s*rgb_G_multiplier/rgb_G_divisor;
-          myVertexColorArray[p+2+3] = s*rgb_B_multiplier/rgb_B_divisor;
-          //*/
+      
+      //check for not animating the stroke currently being drawn
+      if(lasertagbattlemode && p >= lt_animate_until_varray_index){
+        s = osc_actstroke_specvar;
+        lastSpecVar = osc_actstroke_specvar;
+        //s = osc_minimum_specvar;
+        //lastSpecVar = osc_minimum_specvar;
+      } else {
+        s = GetUnmangledSpecValByBuilding(**build);
+      }
+      
+      //minimum specvar for everything... so stuff is visible even without audio. adjustable via osc
+      //if(lasertagbattlemode){
+        if(s < osc_minimum_specvar) {
+          s = osc_minimum_specvar;
         }
+      //}
+      //lt_animate_until_roofsvarray_index = roofsVertexArray.size()-1;
+      
+      //dont do median of building's specVar in different strokes (beginning/end of strokes):
+      if(lasertagbattlemode && strokebeginindices.size() > 0) {
+        for(int k=0;k<strokebeginindices.size()-1;k++) {
+          if(p == strokebeginindices.at(k)+1) {
+            lastSpecVar = s;
+          }
+        }
+      }
+      
+      RcolorSpec = s * building_color_multiply_R;
+      GcolorSpec = s * building_color_multiply_G;
+      BcolorSpec = s * building_color_multiply_B;
+      vertSpec = s * building_vert_multiply;
+    
+      act_RcolorSpec = s * building_color_multiply_R;
+      act_GcolorSpec = s * building_color_multiply_G;
+      act_BcolorSpec = s * building_color_multiply_B;
+//fixme crashed here
+      act_vertSpec = s * building_vert_multiply;
+      last_RcolorSpec = lastSpecVar * building_color_multiply_R;
+      last_GcolorSpec = lastSpecVar * building_color_multiply_G;
+      last_BcolorSpec = lastSpecVar * building_color_multiply_B;
+      last_vertSpec = lastSpecVar * building_vert_multiply;
+      
+        
+      if(drawBuildingsToggle) {
+        
+        if(lasertagbattlemode) {
+
+            Polygon *blah = (*build)->poly;
+            for (int i=(*blah).size()-1; i >= 0; i--) {
+              if(i == 2 ) {
+                //first/last quad
+                myVertexArray[p+2] = building_min_height + act_vertSpec;
+                myVertexArray[p+2+3] = building_min_height + act_vertSpec;
+                myVertexColorArray[p] = act_RcolorSpec;
+                myVertexColorArray[p+1] = act_GcolorSpec;
+                myVertexColorArray[p+2] = act_BcolorSpec;
+                myVertexColorArray[p+0+3] = act_RcolorSpec;
+                myVertexColorArray[p+1+3] = act_GcolorSpec;
+                myVertexColorArray[p+2+3] = act_BcolorSpec;
+                
+              } else if(i == 3) {
+                //sidequad
+                myVertexArray[p+2] = building_min_height + last_vertSpec;
+                myVertexArray[p+2+3] = building_min_height + act_vertSpec;
+                myVertexColorArray[p] = last_RcolorSpec;
+                myVertexColorArray[p+1] = last_GcolorSpec;
+                myVertexColorArray[p+2] = last_BcolorSpec;
+                myVertexColorArray[p+0+3] = act_RcolorSpec;
+                myVertexColorArray[p+1+3] = act_GcolorSpec;
+                myVertexColorArray[p+2+3] = act_BcolorSpec;
+              } else if( i == 0) {
+                //first/last quad
+                myVertexArray[p+2] = building_min_height + last_vertSpec;
+                myVertexArray[p+2+3] = building_min_height + last_vertSpec;
+                myVertexColorArray[p] = last_RcolorSpec;
+                myVertexColorArray[p+1] = last_GcolorSpec;
+                myVertexColorArray[p+2] = last_BcolorSpec;
+                myVertexColorArray[p+0+3] = last_RcolorSpec;
+                myVertexColorArray[p+1+3] = last_GcolorSpec;
+                myVertexColorArray[p+2+3] = last_BcolorSpec;
+              } else if (i == 1){
+                //sidequad
+                myVertexArray[p+2] = building_min_height + act_vertSpec;
+                myVertexArray[p+2+3] = building_min_height + last_vertSpec;
+                myVertexColorArray[p] = act_RcolorSpec;
+                myVertexColorArray[p+1] = act_GcolorSpec;
+                myVertexColorArray[p+2] = act_BcolorSpec;
+                myVertexColorArray[p+0+3] = last_RcolorSpec;
+                myVertexColorArray[p+1+3] = last_GcolorSpec;
+                myVertexColorArray[p+2+3] = last_BcolorSpec;
+              }
+              p+=12;//
+            }
+          
+          
+        } else {
+          Polygon *blah = (*build)->poly;
+          for (int i=(*blah).size()-1; i >= 0; i--) {
+            myVertexArray[p+2] = building_min_height + vertSpec;
+            myVertexArray[p+2+3] = building_min_height + vertSpec;
+            myVertexColorArray[p] = RcolorSpec;
+            myVertexColorArray[p+1] = GcolorSpec;
+            myVertexColorArray[p+2] = BcolorSpec;
+            myVertexColorArray[p+0+3] = RcolorSpec;
+            myVertexColorArray[p+1+3] = GcolorSpec;
+            myVertexColorArray[p+2+3] = BcolorSpec;
+            p+=12;//
+          }
+        }
+        
       }
       
       
       ///*
       if(drawRoofToggle) {
         VertexIndexList *bleh = (*build)->orderedVertices;  
-        for (int i=0;i<(*bleh).size();i++) {
-          //UARGH FIXME
-          //r is running beyond array size!
-          //if(r < roofsVertexArray.size()) {
-          //if(r < 150000) {
-            myRoofsVertexArray[r+2] = 50 + s*100;
-            myRoofsColorVertexArray[r] = 1.0;
-            
-            //BIG FIXME
-            myRoofsColorVertexArray[r+0] = s*rgb_R_multiplier/rgb_R_divisor; //FIXME wasnt changed at runtime originally :(
-            
-            myRoofsColorVertexArray[r+1] = s*rgb_G_multiplier/rgb_G_divisor;
-            myRoofsColorVertexArray[r+2] = s*rgb_B_multiplier/rgb_B_divisor;
-            r += 3;
-          //} 
-        }
-        //*/
-        /*
-        if(buildC < buildingOffsetsinRoofsArray.size()-1 ) {
-          for(int i=buildingOffsetsinRoofsArray.at(buildC); i < buildingOffsetsinRoofsArray.at(buildC+1); i++) {
-            myRoofsVertexArray[i*3+2] = 50 + s*100;
+        if(lasertagbattlemode) {
+          Polygon *blah = (*build)->poly;
+          for (int i=(*blah).size()-1; i >= 0; i--) {
+            ///*
+            if(i == 0 ) {
+              myRoofsVertexArray[q+2] = building_min_height + last_vertSpec;
+              myRoofsColorVertexArray[q] = last_RcolorSpec;
+              myRoofsColorVertexArray[q+1] = last_GcolorSpec;
+              myRoofsColorVertexArray[q+2] = last_BcolorSpec;
+            } else if(i == 1) {
+              myRoofsVertexArray[q+2] = building_min_height + act_vertSpec;
+              myRoofsColorVertexArray[q] = act_RcolorSpec;
+              myRoofsColorVertexArray[q+1] = act_GcolorSpec;
+              myRoofsColorVertexArray[q+2] = act_BcolorSpec;
+            } else if( i == 2) {  
+              myRoofsVertexArray[q+2] = building_min_height + act_vertSpec;
+              myRoofsColorVertexArray[q] = act_RcolorSpec;
+              myRoofsColorVertexArray[q+1] = act_GcolorSpec;
+              myRoofsColorVertexArray[q+2] = act_BcolorSpec;
+            } else if (i == 3){
+              myRoofsVertexArray[q+2] = building_min_height + last_vertSpec;
+              myRoofsColorVertexArray[q] = last_RcolorSpec;
+              myRoofsColorVertexArray[q+1] = last_GcolorSpec;
+              myRoofsColorVertexArray[q+2] = last_BcolorSpec;
+            }
+            //*/
+            q += 3;//
           }
-        }*/
+          
+        } else {
+          for (int i=0;i<(*bleh).size();i++) {
+              myRoofsVertexArray[r+2] = building_min_height + vertSpec;
+              myRoofsColorVertexArray[r+0] = RcolorSpec;
+              myRoofsColorVertexArray[r+1] = GcolorSpec;
+              myRoofsColorVertexArray[r+2] = BcolorSpec;
+              r += 3;
+          }
+        }
+        
       }
-      
+      lastSpecVar = s;
       buildC++;
-	}
-//	const int size = (sizeof(myRoofsVertexArray)/sizeof(myRoofsVertexArray[0]));
-//  cout << "roofsVertexArray size:" << roofsVertexArray.size() << endl;
-//  cout << "myRoofsVertexArray size:" << size << endl;
-//	cout << "rvcount: " << roofVcount << endl;
-	//*/
-	
-	
-//  for(int i=0;i<roofsVertexArray.size()/3;i++) {
-//    myRoofsVertexArray[i*3+2] = s*500;
-//	}
-
+  }
+  if (drawGridToggle) {
+    UpdateFFTGridVertexArray(raster_x, raster_y,0,false);
+  }
   BeginFrame();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glPushMatrix();
-  glScalef(0.01, 0.01, 0.01);
+  //glScalef(0.01, 0.01, 0.01);
+  //ltbattlescale
+  glScalef(0.04, 0.04, 0.04);
   //glScalef(0.1,0.1,0.1);
   //glTranslatef(-500,500,0);
 //  glColor3f(0.95,0.95,0.95);
@@ -1545,7 +1691,11 @@ void MySDLVU::Display()
       glVertexPointer(3, GL_FLOAT, 0, myRoofsVertexArray);
       glColorPointer(3, GL_FLOAT, 0, myRoofsColorVertexArray);
       glNormalPointer(GL_FLOAT, 0, myRoofsNormalsArray);
-      glDrawArrays(GL_TRIANGLES, 0, roofsVertexArray.size()/3);
+      if(lasertagbattlemode && lt_even_polygons) {
+        glDrawArrays(GL_QUADS, 0, roofsVertexArray.size()/3);
+      } else {
+        glDrawArrays(GL_TRIANGLES, 0, roofsVertexArray.size()/3);
+      }
     }
     
     if(drawBuildingsToggle) {
@@ -1554,125 +1704,36 @@ void MySDLVU::Display()
       glNormalPointer(GL_FLOAT, 0, myNormalsArray);
       glDrawArrays(GL_QUADS, 0, vertexArray.size()/3);
     }
+    
+    
+    
+    if (drawGridToggle) {
+      //lines array has no normals, disable normal pointer or funny crashes happen!
+      glDisableClientState(GL_NORMAL_ARRAY);
+      glVertexPointer(3, GL_FLOAT, 0, fftgridVertexArray);
+      glColorPointer(3, GL_FLOAT, 0, fftgridColorArray);
+      glDrawArrays(GL_LINES, 0, (fftgridsize*8));
+    }
+      
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
     
     //FIXME old immediatemode code
-    build = buildings->begin();
-  	buildend = buildings->end();
-    if (drawGridToggle)
-      DrawFFTGrid(raster_x, raster_y,0);
-
     if(drawSpec2GridLinesToggle) {
-      //cout << "spec2gridlines" << endl;
+      build = buildings->begin();
+    	buildend = buildings->end();
   	  for (;build != buildend; build++) {
-          //DrawCentroid(**build, 100); //slow debug func
-          //DrawMeanCenter(**build, 100);
-
-        
-            DrawCentroid2GridLines(**build, 0, 0, raster_x, raster_y);
-          //if(drawBuildingsToggle)
-          //  DrawBuildingByRasterSpectrum(**build, 50);
-          //p++;
+          DrawCentroid2GridLines(**build, 0, 0, raster_x, raster_y);
     	}
   	}
-  //*/
-  glPopMatrix();
-//*/
-	//DrawFloor();
   
-  krach_console_draw();
+  glPopMatrix();
   
   EndFrame();
-
-  //delete[] myVertexArray;
-  //delete[] myVertexColorArray;
-}
-
-// override the display method to do your custom drawing
-void MySDLVU::DisplayOld()
-{
-
-  static GLUquadric * q = gluNewQuadric();
-  BeginFrame();
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	int p = 0;
-
-	PolygonList::const_iterator poly, polyend;
-
-
-  glPushMatrix();
-
-  poly = polygons->begin();
-  polyend = polygons->end();
-
-  glScalef(0.01, 0.01, 0.01);
-  glTranslatef(-500,500,0);
-  glColor3f(0.95,0.95,0.95);
-
-  ///*
-  p=0;
-	BuildingList::const_iterator build, buildend;
-	//PolygonList::const_iterator poly, polyend;
-	build = buildings->begin();
-	buildend = buildings->end();
-
-  //DrawGrid(raster_x, raster_y,-200);
-
-  if (drawGridToggle)
-    DrawFFTGrid(raster_x, raster_y,0);
-
-	for (;build != buildend; build++) {
-      //DrawCentroid(**build, 100); //slow debug func
-      //DrawMeanCenter(**build, 100);
-
-      if(drawSpec2GridLinesToggle)
-        DrawCentroid2GridLines(**build, 0, 0, raster_x, raster_y);
-      if(drawBuildingsToggle)
-//        DrawBuildingByRasterSpectrum(**build, 50);
-      p++;
-	}
-
-
-  glPopMatrix();
-//*/
-	//DrawFloor();
-
-  EndFrame();
-
-
 }
 
 
-
-void MySDLVU::DrawPoly(const Polygon &poly, float height, float specVar) {
-  if (poly.size() < 3) return;
-
-//	glColor3f(1., 0, (GLfloat)MySpectrum[spectrumIndex]);
-  glBegin(GL_QUADS);
-
-  for (int i=poly.size()-1, n; i >= 0; i--) {
-    n = i-1;
-    if (n < 0) n = poly.size()-1;
-    glColor3f(1.,  (specVar*2000)/16384,  (specVar*2000)/65384);
-
-
-    glVertex3f(poly[i].x, -poly[i].y, height+(specVar*3000));
-    glVertex3f(poly[n].x, -poly[n].y, height+(specVar*3000));
-
-		//farbe "unten":
-		//glColor3f(0.7,0.7,0.7);
-    glColor3f(0,0,0);
-
-    glVertex3f(poly[n].x, -poly[n].y, 0.);
-
-    glVertex3f(poly[i].x, -poly[i].y, 0.);
-
-  }
-
-  glEnd();
-}
 
 
 /// Handler for 'active' mouse drag events, i.e. dragging with a button pressed.
@@ -1747,7 +1808,256 @@ void MySDLVU::Motion(const SDL_MouseMotionEvent & event)
   }
 }
 
+void MySDLVU::osc_set_evenpolygons(osc::ReceivedMessage& oscmsg) {
+  osc::int32 evenpolytoggle = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> evenpolytoggle >> osc::EndMessage;
+    lt_even_polygons = evenpolytoggle == 0?false:true;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+    //fallback just toggle if wrong argument/toomany/none is provided...
+    lt_even_polygons = !lt_even_polygons;
+  }
+  cout << "lt_even_polygons: " << lt_even_polygons << endl;
+}
+
+void MySDLVU::osc_set_fftgrid_color_rgb(osc::ReceivedMessage& oscmsg) {
+  float r=0;
+  float g=0;
+  float b=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> r >> g >> b >> osc::EndMessage;
+    fftgrid_color_multiply_R = r;
+    fftgrid_color_multiply_G = g;
+    fftgrid_color_multiply_B = b;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "fftgrid_color_multiply_RGB: " << fftgrid_color_multiply_R << " " << fftgrid_color_multiply_G << " " << fftgrid_color_multiply_B << " " << endl;
+}
+
+void MySDLVU::osc_set_fftgrid_vert_multiply(osc::ReceivedMessage& oscmsg) {
+  float m = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> m >> osc::EndMessage;
+    fftgrid_vert_multiply = m;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "fftgrid_vert_multiply: " << fftgrid_vert_multiply << endl;
+}
+
+void MySDLVU::osc_set_building_color_rgb(osc::ReceivedMessage& oscmsg) {
+  float r=0;
+  float g=0;
+  float b=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> r >> g >> b >> osc::EndMessage;
+    building_color_multiply_R = r;
+    building_color_multiply_G = g;
+    building_color_multiply_B = b;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "building_color_multiply_RGB: " << r << " " << g << " " << b << " " << endl;
+}
+
+void MySDLVU::osc_set_building_vert_multiply(osc::ReceivedMessage& oscmsg) {
+  float m = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> m >> osc::EndMessage;
+    building_vert_multiply = m;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "building_vert_multiply: " << building_vert_multiply << endl;
+}
+
+void MySDLVU::osc_set_building_min_height(osc::ReceivedMessage& oscmsg) {
+  float h = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> h >> osc::EndMessage;
+    building_min_height = h;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "building_min_height: " << building_min_height << endl;
+}
+
+void MySDLVU::osc_toggleNormalizeWithFixedValue(osc::ReceivedMessage& oscmsg) {
+  osc::int32 fixednormalizetoggle=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> fixednormalizetoggle >> osc::EndMessage;
+    normalizeaudiospectrumWithFixedValue = fixednormalizetoggle == 0?false:true;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+    //fallback just toggle if wrong argument/toomany/none is provided...
+    normalizeaudiospectrumWithFixedValue = !normalizeaudiospectrumWithFixedValue;
+  }
+  cout << "normalizeaudiospectrumWithFixedValue: " << normalizeaudiospectrumWithFixedValue << endl;
+}
+
+void MySDLVU::osc_setFixedNormalizeMaxValue(osc::ReceivedMessage& oscmsg) {
+  float newfixednormalizeMaxValue = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> newfixednormalizeMaxValue >> osc::EndMessage;
+    fixednormalizeMaxValue = newfixednormalizeMaxValue;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "fixednormalizeMaxValue: " << fixednormalizeMaxValue << endl;
+}
+
+void MySDLVU::osc_toggleAdjustSpectrum_freqVSamp(osc::ReceivedMessage& oscmsg) {
+  osc::int32 adjusttoggle=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> adjusttoggle >> osc::EndMessage;
+    adjustSpectrum_freqVSamp = adjusttoggle == 0?false:true;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+    //fallback just toggle if wrong argument/toomany/none is provided...
+    adjustSpectrum_freqVSamp = !adjustSpectrum_freqVSamp;
+  }
+  cout << "adjustSpectrum_freqVSamp: " << adjustSpectrum_freqVSamp << endl;
+}
+
+void MySDLVU::osc_toggleNormalizeSpectrum(osc::ReceivedMessage& oscmsg) {
+  osc::int32 normtoggle=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> normtoggle >> osc::EndMessage;
+    normalizeaudiospectrum = normtoggle == 0?false:true;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+    //fallback just toggle if wrong argument/toomany/none is provided...
+    normalizeaudiospectrum = !normalizeaudiospectrum;
+  }
+  cout << "normalizeaudiospectrum: " << normalizeaudiospectrum << endl;
+}
+
+void MySDLVU::osc_toggleLogSpectrum(osc::ReceivedMessage& oscmsg) {
+  osc::int32 logtoggle=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> logtoggle >> osc::EndMessage;
+    convertSpectrum2logScale = logtoggle == 0?false:true;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+    //fallback just toggle if wrong argument/toomany/none is provided...
+    convertSpectrum2logScale = !convertSpectrum2logScale;
+  }
+  cout << "convertSpectrum2logScale: " << convertSpectrum2logScale << endl;
+}
+
+void MySDLVU::osc_setLogSpectrumLowCutoff(osc::ReceivedMessage& oscmsg) {
+  osc::int32 lcutoff = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> lcutoff >> osc::EndMessage;
+    //fixme gotta check for an upper limit for lcutoff?   < LOG_SPECTRUM_BANDS ?
+    if(lcutoff > -1 ) {
+      logSpectrumLowCutOff = lcutoff;
+    }
+    calculateConversionBoundaries();
+    cout << "logSpectrumLowCutOff: " << logSpectrumLowCutOff << endl;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+}
+
+void MySDLVU::osc_setLogSpectrumSize(osc::ReceivedMessage& oscmsg) {
+  osc::int32 logsize = DEF_LOG_SPECTRUM_BANDS;
+  int new_raster_x=0;
+  int new_raster_y=0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> logsize >> osc::EndMessage;
+    
+    //fixme : logarithmic spectrum can be of any size... but switching the MySpectrum pointer to linear with to big raster crashes us of course.... separate this!  (crash happens in update_spectrum_raster_mappings() iirc)
+    if(logsize != LOG_SPECTRUM_BANDS && logsize > 2 && logsize < SPECTRUM_LENGTH+1 && logsize >= raster_x*raster_y) {
+      LOG_SPECTRUM_BANDS = logsize;
+      free(conversionBoundaries);
+      free(MyLogSpectrum);
+      conversionBoundaries = (int*) malloc(sizeof(int)*LOG_SPECTRUM_BANDS*2);
+      MyLogSpectrum = (float*) malloc(sizeof(float)*LOG_SPECTRUM_BANDS);
+      
+      calculateConversionBoundaries();
+      update_spectrum_raster_mappings();
+    }
+    cout << "LOG_SPECTRUM_BANDS: " << LOG_SPECTRUM_BANDS << endl;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+}
+
+void MySDLVU::osc_setColorsTop(osc::ReceivedMessage& oscmsg) {
+  
+  rgb_R_divisor = 1;
+  rgb_G_divisor = 1;
+  rgb_B_divisor = 1;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> rgb_R_multiplier >> rgb_G_multiplier >> rgb_B_multiplier >> osc::EndMessage;
+    //raster_poly_search_distance = newsearchdist;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+};
+
+void MySDLVU::osc_setColorsBottom(osc::ReceivedMessage& oscmsg) {
+  
+};
+
+void MySDLVU::update_spectrum_raster_mappings() {
+  this->genSpec2RasterMapping(raster_x, raster_y, 0);
+  this->genPoly2RasterFactors(raster_x, raster_y, raster_poly_search_distance);
+  this->GenerateFFTGridVertexArray(raster_x, raster_y);
+}
+
+void MySDLVU::osc_setRasterPolySearchDistance(osc::ReceivedMessage& oscmsg) {
+  osc::int32 newsearchdist = raster_poly_search_distance;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> newsearchdist >> osc::EndMessage;
+    raster_poly_search_distance = newsearchdist;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  update_spectrum_raster_mappings();
+}
+
+void MySDLVU::osc_setRasterSize(osc::ReceivedMessage& oscmsg) {
+  osc::int32 new_raster_x = DEF_RASTER_X;
+  osc::int32 new_raster_y = DEF_RASTER_Y;
+  osc::int32 new_spectrumDivisor = 2;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    osc::int32 new_raster_x, new_raster_y, new_spectrumDivisor;
+    args >> new_raster_x >> new_raster_y >> new_spectrumDivisor >> osc::EndMessage;
+    if(new_raster_x * new_raster_y < SPECTRUM_LENGTH+1 && new_raster_x * new_raster_y < LOG_SPECTRUM_BANDS+1) {
+      raster_x = new_raster_x;
+      raster_y = new_raster_y;
+      spectrumDivisor = new_spectrumDivisor;
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  update_spectrum_raster_mappings();
+}
+
 void MySDLVU::osc_loadNextImage(osc::ReceivedMessage& oscmsg) {
+  if(lasertagbattlemode) {
+    return;
+  }
   int oscimgNo = 0;
   try {
     osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
@@ -1877,6 +2187,735 @@ void MySDLVU::osc_SelectCamera(osc::ReceivedMessage& oscmsg) {
   SelectCamera(osccamno);
 }
 
+
+
+void MySDLVU::osc_set_osc_actstroke_specvar(osc::ReceivedMessage& oscmsg) {
+  float n_min;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> n_min >> osc::EndMessage;
+    osc_actstroke_specvar = n_min;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "osc_actstroke_specvar: " << osc_actstroke_specvar << endl;
+}
+
+void MySDLVU::osc_set_osc_minimum_specvar(osc::ReceivedMessage& oscmsg) {
+  float n_min;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> n_min >> osc::EndMessage;
+    osc_minimum_specvar = n_min;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "osc_minimum_specvar: " << osc_minimum_specvar << endl;
+}
+
+//set brushsize via osc 
+//behaviour if this is done in the middle of drawing a lt shape maybe funny!?
+void MySDLVU::osc_ltbattle_setbrushsize(osc::ReceivedMessage& oscmsg) {
+  osc::int32 n_brushsize;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> n_brushsize >> osc::EndMessage;
+    lt_brush_size = n_brushsize;
+    //fixme hardcoded value for 3200x2400 scale
+    lt_brush_size = round(lt_brush_size * 3.125);
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  
+  cout << "lt_brush_offset_x: " << lt_brush_offset_x << endl;
+  cout << "lt_brush_offset_y: " << lt_brush_offset_y << endl;
+  cout << "lt_brush_size: " << lt_brush_size << endl;
+}
+
+void MySDLVU::setupLTbattlemode() {
+  
+  //free/delete any prev resources - vert arrays etc!
+  vertexArray.clear();
+  vertexArray.resize(0);
+  colorVertexArray.clear();
+  colorVertexArray.resize(0);
+  normalsArray.clear();
+  normalsArray.resize(0);
+  
+  roofsVertexArray.clear();
+  roofsVertexArray.resize(0);
+  roofsColorVertexArray.clear();
+  roofsColorVertexArray.resize(0);
+  roofsNormalsArray.clear();
+  roofsNormalsArray.resize(0);
+  buildingOffsetsinRoofsArray.clear();
+  buildingOffsetsinRoofsArray.resize(0);
+  
+  //if(geometry_resources_freed == false) {
+    delete[] myVertexArray;
+    delete[] myVertexColorArray;
+    delete[] myRoofsVertexArray;
+    delete[] myRoofsColorVertexArray;
+    delete[] myNormalsArray;
+    delete[] myRoofsNormalsArray;
+    //geometry_resources_freed = true;
+  //}
+  
+  /**/
+  freePolygonList(*polygons);
+  freeBuildingList(*buildings);
+  //geometry_resources_freed = true;
+  
+  //maxX=1024;
+  maxX=3200;
+  minX=0;
+  //maxY=768;
+  maxY=2400;
+  minY=0;
+  
+	rvc=0;
+	bool lt_newstroke_starting = true;
+  int ltshape_pointcount = 0;
+}
+
+void MySDLVU::set_ltbattlemode(bool toggle) {
+  ltbattlemodetoggle = toggle;
+  if(ltbattlemodetoggle == true) {
+    
+    //freePolygonList(*polygons);
+    //freeBuildingList(*buildings);
+    //setupLTbattlemode();
+    lasertagbattlemode = true;
+  } else {
+    lasertagbattlemode = false;
+    
+  }
+  cout << "LaserTagBattle on/off: " << ltbattlemodetoggle << endl;
+}
+
+void MySDLVU::osc_toggle_ltbattlemode(osc::ReceivedMessage& oscmsg) {
+  int ltbattlemode = 0;
+  try {
+    osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
+    if(oscmsg.ArgumentCount() > 0) {
+      if(arg->IsInt32()) {
+        ltbattlemode = arg->AsInt32();
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  bool tmptoggle = ltbattlemode == 0 ? false : true;
+  set_ltbattlemode(tmptoggle);
+}
+
+void MySDLVU::osc_ltbattle_recvCoords(osc::ReceivedMessage& oscmsg) {
+  if(!lasertagbattlemode) {
+    return;
+  }
+  osc::int32 px;
+  osc::int32 py;
+  osc::int32 wpx;
+  osc::int32 wpy;
+  //fixme 
+  //will work with warped points for now
+  //maybe do warping ourself in future?
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> px >> py >> wpx >> wpy >> osc::EndMessage;
+    
+    //test
+    //if distance between last point and new incoming point < brushsize   we discard the new point
+    float distance=0;
+    int new_p_x = wpx;
+    int new_p_y = wpy;
+    //fixme hardcoded check if lasertag battle is sending us non warped coords aka non traced coords, but coords created by mouseinput
+    if(wpx == -500 && wpy == -500) {
+      new_p_x = px;
+      new_p_y = py;
+    }
+    
+    
+    //3,125
+    //mangle / adjust up to 3200x2400 scale:
+    new_p_x = round(new_p_x*3.125);
+    new_p_y = round(new_p_y*3.125);
+    
+    if(lt_int_shape.size() > 1 ) {
+      int lastx = lt_int_shape.at(lt_int_shape.size()-2);
+      int lasty = lt_int_shape.at(lt_int_shape.size()-1);
+      float xcomp = new_p_x - lastx;
+      float ycomp = new_p_y - lasty;
+      distance = sqrt(pow(xcomp,2) + pow(ycomp,2)); //2d distance only
+      //cout << "last wpx/y: " << lastx << " / " << lasty << endl;
+      //cout << "     wpx/y: " << new_p_x << " / " << new_p_y << endl;
+      //cout << "distance: " << distance << endl;
+    } else {
+      distance = lt_brush_size +1;
+    }
+    if(distance > lt_brush_size) {
+      lt_int_shape.push_back(new_p_x);
+      lt_int_shape.push_back(new_p_y);
+
+      act_lt_shape.push_back(wpx);
+      act_lt_shape.push_back(wpy);
+      act_lt_shape_timestamps.push_back(SDL_GetTicks());
+    
+      ltshape_pointcount++;
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  //cout << "received coords via osc:" << endl;
+  //cout << wpx << " " << wpy << endl;
+  process_lt_coords();
+}
+
+void MySDLVU::process_lt_coords() {
+  //if timestamp == 0... = Move command
+  if(lt_int_shape.size() > 2 && lt_int_shape.size() < 5) {
+    //fresh start:
+    //take last two points and make a bulding out of them
+    create_building_from_lasercoord();
+    //delete first point from lt_shape vector, we keep last one for next building/poly
+    // & reset newstroke flag
+    vector<int>::iterator sb = lt_int_shape.begin();
+    lt_int_shape.erase(sb);
+    sb = lt_int_shape.begin();
+    lt_int_shape.erase(sb);
+    lt_newstroke_starting = false;
+    //cout << "process lt coords end" << endl;
+  }
+  
+}
+
+void MySDLVU::create_building_from_lasercoord() {
+  //takes last two points from lt_shape vector and makes a "building" out of them
+  Polygon *polygon = new Polygon(4);
+  Building *building = new Building();
+  (*building).poly = new Polygon(4);
+  Polygon *bpoly = (*building).poly;
+  
+  (*building).orderedVertices = new VertexIndexList();
+  VertexIndexList* vil = (*building).orderedVertices;
+  (*building).rasterPoints2affect = new Raster2VertexList();
+  
+  float x,y,x2,y2,x3,y3,x4,y4;
+  x=0;y=0;x2=0;y2=0;x3=0;y3=0;x4=0;y4=0;
+  x = lt_int_shape.at(0);
+  y = lt_int_shape.at(1);
+  x2 = lt_int_shape.at(2);
+  y2 = lt_int_shape.at(3);
+  
+  
+  GLfloat *lt_v = new GLfloat[2];
+  lt_v[0] = x2 - x;
+  lt_v[1] = y2 - y;
+  
+  //normalize
+  GLfloat length = sqrt(
+    pow(lt_v[0],2)+
+    pow(lt_v[1],2)
+  );
+  lt_v[0] /= length;
+  lt_v[1] /= length;
+  
+  //normal:
+  //to the right
+  GLfloat *lt_nv = new GLfloat[2];
+  lt_nv[0] = lt_v[1];
+  lt_nv[1] = lt_v[0] * -1;
+  //normal:
+  //to the left
+  /*GLfloat *lt_nvl = new GLfloat[2];
+  lt_nvl[0] = lt_v[1] * -1;
+  lt_nvl[1] = lt_v[0];*/
+  
+  x = lt_int_shape.at(0) - (lt_brush_size/2) * lt_nv[0];
+  y = lt_int_shape.at(1) - (lt_brush_size/2) * lt_nv[1];
+  x2 = lt_int_shape.at(2) - (lt_brush_size/2) * lt_nv[0];
+  y2 = lt_int_shape.at(3) - (lt_brush_size/2) * lt_nv[1];
+  x3 = lt_int_shape.at(2) + (lt_brush_size/2) * lt_nv[0];
+  y3 = lt_int_shape.at(3) + (lt_brush_size/2) * lt_nv[1];
+  x4 = lt_int_shape.at(0) + (lt_brush_size/2) * lt_nv[0];
+  y4 = lt_int_shape.at(1) + (lt_brush_size/2) * lt_nv[1];
+  
+  //fixme
+  //checking newstroke_startin should be enough.
+  //then we should at least have buildings->size() > 0
+  if(lt_newstroke_starting == false && buildings->size() > 0) {
+    //"merge" this new polygon with previous one, so they dont overlap
+    //x/y of last 2 points of last polygon
+    GLfloat *mrgd_nv = new GLfloat[2];
+    mrgd_nv[0] = lt_nv[0] + last_normalv[0];
+    mrgd_nv[1] = lt_nv[1] + last_normalv[1];
+    //normalize
+    GLfloat mrgd_length = sqrt(
+      pow(mrgd_nv[0],2)+
+      pow(mrgd_nv[1],2)
+    );
+    mrgd_nv[0] /= mrgd_length;
+    mrgd_nv[1] /= mrgd_length;
+    
+    
+    Building *prevBuild = buildings->at(buildings->size()-1);
+    Polygon *prevPoly = prevBuild->poly;
+    ///*
+    (*prevPoly)[1].x = lt_int_shape.at(0) - (lt_brush_size/2) * mrgd_nv[0];
+    (*prevPoly)[1].y = lt_int_shape.at(1) - (lt_brush_size/2) * mrgd_nv[1];
+    (*prevPoly)[2].x = lt_int_shape.at(0) + (lt_brush_size/2) * mrgd_nv[0];
+    (*prevPoly)[2].y = lt_int_shape.at(1) + (lt_brush_size/2) * mrgd_nv[1];
+    x = (*prevPoly)[1].x;
+    y = (*prevPoly)[1].y;
+    x4 = (*prevPoly)[2].x;
+    y4 = (*prevPoly)[2].y;
+    //*/
+    
+    /*
+    //median would work also ...
+    (*prevPoly)[1].x = ((*prevPoly)[1].x + x) / 2;
+    x = (*prevPoly)[1].x;
+    (*prevPoly)[1].y = ((*prevPoly)[1].y + y) / 2;
+    y = (*prevPoly)[1].y;
+    (*prevPoly)[2].x = ((*prevPoly)[2].x + x4) / 2;
+    x4 = (*prevPoly)[2].x;
+    (*prevPoly)[2].y = ((*prevPoly)[2].y + y4) / 2;
+    y4 = (*prevPoly)[2].y;
+    */
+    
+    //recalc area/centroid etc for prev poly and remap it onto fft grid
+    calcCentroidForBuilding(prevBuild);
+    //erase prevBuild from vertexarray - 4 quads 12vertices each 
+    //fixme keep loop count variable!!
+    for(int vaI=0; vaI < prevPoly->size()*12; vaI++) {
+    //for(int vaI=0;vaI<48;vaI++) {
+      vertexArray.pop_back();
+      normalsArray.pop_back();
+      colorVertexArray.pop_back();
+    }
+    addBuilding2VertexArray(prevBuild);
+    //
+    //for (int i=0; i < prevBuild->orderedVertices->size()*3; i++) {
+    //forloop for QUAD roofs, instead of triangle roofs
+    for (int i=0; i < prevPoly->size()*3; i++) {
+      roofsVertexArray.pop_back();
+      roofsColorVertexArray.pop_back();
+      roofsNormalsArray.pop_back();
+    }
+    //TessellateBuilding(*prevBuild);
+    //test for only using quads instead of triangles for "roofs"
+    roofsVertexArray.push_back(prevPoly->at(0).x);
+    roofsVertexArray.push_back(-prevPoly->at(0).y);
+    roofsVertexArray.push_back(50);
+    roofsVertexArray.push_back(prevPoly->at(1).x);
+    roofsVertexArray.push_back(-prevPoly->at(1).y);
+    roofsVertexArray.push_back(50);
+    roofsVertexArray.push_back(prevPoly->at(2).x);
+    roofsVertexArray.push_back(-prevPoly->at(2).y);
+    roofsVertexArray.push_back(50);
+    roofsVertexArray.push_back(prevPoly->at(3).x);
+    roofsVertexArray.push_back(-prevPoly->at(3).y);
+    roofsVertexArray.push_back(50);
+    for(int i=0;i<4;i++) {
+      roofsColorVertexArray.push_back(1.0);
+      roofsColorVertexArray.push_back(1.0);
+      roofsColorVertexArray.push_back(1.0);
+    
+      roofsNormalsArray.push_back(0);
+      roofsNormalsArray.push_back(0);
+      roofsNormalsArray.push_back(1);
+    }
+    //since i only use quads for lasertag visualization i can let the tessellator be a tessellator..... on its own...
+    //loaded into mem but not called from here.
+    
+    delete[] mrgd_nv;
+    //merge end
+  }
+  //save last normalvector
+  last_normalv[0] = lt_nv[0];
+  last_normalv[1] = lt_nv[1];
+  last_lt_v[0] = lt_v[0];
+  last_lt_v[1] = lt_v[1];
+  delete[] lt_v;
+  delete[] lt_nv;
+  
+  
+  double z;
+  int count = 0;
+  z  = (x3 - x) * (y3 - y3);
+  z -= (y3 - y) * (x3 - x3);
+  if (z < 0)
+     count--;
+  else if (z > 0)
+     count++;
+  z  = (x2 - x2) * (y - y2);
+  z -= (y2 - y2) * (x - x2);
+  if (z < 0)
+     count--;
+  else if (z > 0)
+     count++;
+  z  = (x - x3) * (y2 - y);
+  z -= (y - y3) * (x2 - x);
+  if (z < 0)
+     count--;
+  else if (z > 0)
+     count++;
+  
+  if (count > 0) {
+    //return(COUNTERCLOCKWISE);
+    //cout << "COUNTERCLOCKWISE" << endl;
+    (*polygon)[0].x = x4;
+    (*polygon)[0].y = y4;
+    (*bpoly)[0].x = x4;
+    (*bpoly)[0].y = y4;
+    (*polygon)[1].x = x3;
+    (*polygon)[1].y = y3;
+    (*bpoly)[1].x = x3;
+    (*bpoly)[1].y = y3;
+    (*polygon)[2].x = x2;
+    (*polygon)[2].y = y2;
+    (*bpoly)[2].x = x2;
+    (*bpoly)[2].y = y2;
+    (*polygon)[3].x = x;
+    (*polygon)[3].y = y;
+    (*bpoly)[3].x = x;
+    (*bpoly)[3].y = y;
+    
+  } else if (count < 0) {
+    //cout << "CLOCKWISE" << endl;
+    //return(CLOCKWISE);
+    (*polygon)[0].x = x;
+    (*polygon)[0].y = y;
+    (*bpoly)[0].x = x;
+    (*bpoly)[0].y = y;
+    (*polygon)[1].x = x2;
+    (*polygon)[1].y = y2;
+    (*bpoly)[1].x = x2;
+    (*bpoly)[1].y = y2;
+    (*polygon)[2].x = x3;
+    (*polygon)[2].y = y3;
+    (*bpoly)[2].x = x3;
+    (*bpoly)[2].y = y3;
+    (*polygon)[3].x = x4;
+    (*polygon)[3].y = y4;
+    (*bpoly)[3].x = x4;
+    (*bpoly)[3].y = y4;
+  } else {
+     //return(0);
+  }
+  
+  calcCentroidForBuilding(building);
+  addBuilding2VertexArray(building);
+  buildings->push_back(building);
+  
+	
+  delete[] myVertexArray;
+  delete[] myVertexColorArray;
+  delete[] myRoofsVertexArray;
+  delete[] myRoofsColorVertexArray;
+  delete[] myNormalsArray;
+  delete[] myRoofsNormalsArray;
+//fixme crashed here!?	
+	myVertexArray = new GLfloat[vertexArray.size()];
+  copy(vertexArray.begin(), vertexArray.end(), myVertexArray);
+  
+  myVertexColorArray = new GLfloat[colorVertexArray.size()];
+  copy(colorVertexArray.begin(), colorVertexArray.end(), myVertexColorArray);
+  
+  myNormalsArray = new GLfloat[normalsArray.size()];
+  copy(normalsArray.begin(), normalsArray.end(), myNormalsArray);
+  
+  geometry_resources_freed = false;
+  
+  
+  this->polycount = buildings->size();
+	spectrumIndex=0;
+
+
+  /*maxX=FLT_MIN;
+  minX=FLT_MAX;
+  maxY=FLT_MIN;
+  minY=FLT_MAX;
+	findPlaneMaxima();*/
+	
+	//maxX=1024;
+  maxX=3200;
+  minX=0;
+  //maxY=768;
+  maxY=2400;
+  minY=0;
+	
+	rvc=0;
+	
+	//fixme temp fix
+  //drawRoofToggle = false;
+  
+  //TessellateBuilding(*building);
+  //only quads used for lasertag... no tessellation needed yet :D horray!  (see above   where i mangle prevbuilding)
+  //test for using quads as roofs not triangles... no tessellation
+  roofsVertexArray.push_back(building->poly->at(0).x);
+  roofsVertexArray.push_back(-building->poly->at(0).y);
+  roofsVertexArray.push_back(50);
+  roofsVertexArray.push_back(building->poly->at(1).x);
+  roofsVertexArray.push_back(-building->poly->at(1).y);
+  roofsVertexArray.push_back(50);
+  roofsVertexArray.push_back(building->poly->at(2).x);
+  roofsVertexArray.push_back(-building->poly->at(2).y);
+  roofsVertexArray.push_back(50);
+  roofsVertexArray.push_back(building->poly->at(3).x);
+  roofsVertexArray.push_back(-building->poly->at(3).y);
+  roofsVertexArray.push_back(50);
+  
+  for(int i=0;i<4;i++) {
+    roofsColorVertexArray.push_back(1.0);
+    roofsColorVertexArray.push_back(1.0);
+    roofsColorVertexArray.push_back(1.0);
+  
+    roofsNormalsArray.push_back(0);
+    roofsNormalsArray.push_back(0);
+    roofsNormalsArray.push_back(1);
+  }
+  
+  myRoofsVertexArray = new GLfloat[roofsVertexArray.size()];
+  copy(roofsVertexArray.begin(), roofsVertexArray.end(), myRoofsVertexArray);
+
+  myRoofsColorVertexArray = new GLfloat[roofsVertexArray.size()];
+  copy(roofsColorVertexArray.begin(), roofsColorVertexArray.end(), myRoofsColorVertexArray);
+
+  myRoofsNormalsArray = new GLfloat[roofsNormalsArray.size()];
+  copy(roofsNormalsArray.begin(), roofsNormalsArray.end(), myRoofsNormalsArray);
+  
+  this->genPoly2RasterFactorForBuilding(raster_x, raster_y, raster_poly_search_distance, building);
+  
+}
+
+void MySDLVU::calcCentroidForBuilding(Building *building) {
+  Polygon *bpoly = (*building).poly;
+  //area of poly:
+  double A=0;
+  int p=0;
+  int i,j;
+  double area = 0;
+
+  for (i=0;i<4;i++) {
+    j = (i + 1) % 4;
+    area += (*bpoly)[i].x * (*bpoly)[j].y;
+    area -= (*bpoly)[i].y * (*bpoly)[j].x;
+    //cout << "tmp area: " << area << endl;
+  }
+  area /= 2;
+  A = (area < 0 ? area * -1 : area );
+  //cout << "AREA: " << A << endl;
+  
+  //centroid:
+  double tmpResultx=0;
+  double tmpResulty=0;
+  p=0;
+  for (int i=0; i < 4; i++) {
+    p = (i + 1) % 4;
+    tmpResultx += ( (double)(*bpoly)[i].x + (double)(*bpoly)[p].x ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
+    tmpResulty += ( (double)(*bpoly)[i].y + (double)(*bpoly)[p].y ) * ( ((double)(*bpoly)[i].x * (double)(*bpoly)[p].y) - ((double)(*bpoly)[p].x * (double)(*bpoly)[i].y) );
+  }
+
+  (*building).dCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
+  (*building).dCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+  (*building).fCenterX = (double)( (double)1 / (double)(A * 6.)) * tmpResultx;
+  (*building).fCenterY = (double)( (double)1 / (double)(A * 6.)) * tmpResulty;
+  if((*building).fCenterY > 0) {
+    (*building).dCenterY *= -1.;
+    (*building).fCenterY *= -1.;
+  }
+  
+  if((*building).fCenterX > 0) {
+    (*building).dCenterX *= -1.;
+    (*building).fCenterX *= -1.;
+  }
+}
+
+
+void MySDLVU::addBuilding2VertexArray(Building *building) {
+  int p = 0;
+  int n = 0;
+  int w = 0;
+  
+  int specVar=1;
+  int height=50;
+
+  Polygon *poly = (Polygon*) (*building).poly;
+  
+  for (int i=(*poly).size()-1, n; i >= 0; i--) {
+    n = i-1;
+    if (n < 0)
+      n = (*poly).size()-1;
+
+    p = i-2;
+    if (p <0)
+      p = (*poly).size()-2;
+    
+    w = i+1;
+    if (w > (*poly).size()-1)
+      w = 0;
+    
+    vertexArray.push_back((*poly)[i].x);
+    vertexArray.push_back(-(*poly)[i].y);
+    vertexArray.push_back(50*i +1);
+    vertexArray.push_back((*poly)[n].x);
+    vertexArray.push_back(-(*poly)[n].y);
+    vertexArray.push_back(50*i +1);
+    vertexArray.push_back((*poly)[n].x);
+    vertexArray.push_back(-(*poly)[n].y);
+    vertexArray.push_back(0);
+    vertexArray.push_back((*poly)[i].x);
+    vertexArray.push_back(-(*poly)[i].y);
+    vertexArray.push_back(0);
+    
+    colorVertexArray.push_back(1.0);
+    colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+    colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
+    
+    colorVertexArray.push_back(1.0);
+    colorVertexArray.push_back(rgb_G_multiplier/rgb_G_divisor);
+    colorVertexArray.push_back(rgb_B_multiplier/rgb_B_divisor);
+    
+    colorVertexArray.push_back(0.);
+    colorVertexArray.push_back(0.);
+    colorVertexArray.push_back(0.);
+    
+    colorVertexArray.push_back(0.);
+    colorVertexArray.push_back(0.);
+    colorVertexArray.push_back(0.);
+    
+    //normals:
+    GLfloat *v1 = new GLfloat[3];
+    GLfloat *v2 = new GLfloat[3];
+    GLfloat *v3 = new GLfloat[3];
+    
+    v1[0] = (*poly)[i].x - (*poly)[n].x;
+    v1[1] = (-1*(*poly)[i].y) - (-1*(*poly)[n].y);
+    v1[2] = 0;
+    
+    v2[0] = (*poly)[n].x - (*poly)[p].x;
+    v2[1] = (-1*(*poly)[n].y) - (-1*(*poly)[p].y);
+    v2[2] = 0;
+    
+    //normalvektor:
+    //b,-a ("rechts" -daten sind counterclockwise (?) )
+    //fixme (possible) 
+    v1[0] *= -1;
+    
+    //fixme 
+    //this is 2d only!
+    
+    //normalize:
+    GLfloat length = sqrt(
+      pow(v1[0],2)+
+      pow(v1[1],2)
+    );
+    v1[0] /= length;
+    v1[1] /= length;
+    v1[2] /= length;
+
+    normalsArray.push_back(v1[1]);
+    normalsArray.push_back(v1[0]);
+    normalsArray.push_back(0);
+    normalsArray.push_back(v1[1]);
+    normalsArray.push_back(v1[0]);
+    normalsArray.push_back(0);
+    normalsArray.push_back(v1[1]);
+    normalsArray.push_back(v1[0]);
+    normalsArray.push_back(0);
+    normalsArray.push_back(v1[1]);
+    normalsArray.push_back(v1[0]);
+    normalsArray.push_back(0);
+    delete[] v1;
+    delete[] v2;
+    delete[] v3;
+  }
+}
+
+void MySDLVU::osc_ltbattle_cmd(osc::ReceivedMessage& oscmsg) {
+  if(!lasertagbattlemode) {
+    return;
+  }
+  
+  string oscltcmd;
+  try {
+    osc::ReceivedMessage::const_iterator arg = oscmsg.ArgumentsBegin();
+    if(oscmsg.ArgumentCount() > 0) {
+      if(arg->IsString()) {
+        oscltcmd = arg->AsString();
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  
+  if(oscltcmd.compare("move") == 0) {
+    lt_newstroke_starting = true;
+    lt_int_shape.clear();
+    act_lt_shape.push_back(INT_MAX);
+    act_lt_shape.push_back(INT_MAX);
+    act_lt_shape_timestamps.push_back(SDL_GetTicks());
+    lt_animate_until_varray_index = vertexArray.size()-1;
+    lt_animate_until_roofsvarray_index = roofsVertexArray.size()-1;
+    strokebeginindices.push_back(vertexArray.size()-1);
+  } else if(oscltcmd.compare("clear") == 0) {
+    //fixme 
+    //possible memory leak? because of how t_lt_shape is defined... pointer hell once more for drug infested brainz
+    t_lt_shape myshape;
+    myshape.lt_shape_P = &act_lt_shape;
+    myshape.lt_shape_timestamps_P = &act_lt_shape_timestamps;
+    lt_shapes.push_back(myshape);
+    act_lt_shape.clear();
+    act_lt_shape_timestamps.clear();
+    
+    lt_int_shape.clear();
+    freePolygonList(*polygons);
+    freeBuildingList(*buildings);
+    buildings->clear();
+    
+    vertexArray.clear();
+    colorVertexArray.clear();
+    normalsArray.clear();
+    
+    roofsVertexArray.clear();
+    roofsColorVertexArray.clear();
+    roofsNormalsArray.clear();
+    buildingOffsetsinRoofsArray.clear();
+    
+    lt_animate_until_varray_index = 0;
+    lt_animate_until_roofsvarray_index = 0;
+    strokebeginindices.clear();
+  } else {
+    //
+    cout << "unknown osc lasertag cmd received" <<  oscltcmd << endl;
+  }
+}
+
+void MySDLVU::calculateConversionBoundaries() {
+  logSpectrumBandwidth = log2(SPECTRUM_LENGTH)/LOG_SPECTRUM_BANDS;
+	for( int j=0; j<LOG_SPECTRUM_BANDS; j++ ) {
+		conversionBoundaries[j]		= round(pow(2,  j   *logSpectrumBandwidth)-1);
+		conversionBoundaries[j+1]	= round(pow(2, (j+1)*logSpectrumBandwidth)-1);
+	}
+  if(logSpectrumLowCutOff > 0) {
+    int j = 0;
+    int cutoff=0;
+    while(j < LOG_SPECTRUM_BANDS) {
+      if(conversionBoundaries[j] <= logSpectrumLowCutOff) {
+        cutoff++;
+      }
+      j++;
+    }
+    logSpectrumBandwidth = log2(SPECTRUM_LENGTH)/(LOG_SPECTRUM_BANDS+cutoff);
+    for( int j=cutoff; j<LOG_SPECTRUM_BANDS+cutoff; j++ ) {
+      conversionBoundaries[j-cutoff]   = round(pow(2,  j   *logSpectrumBandwidth)-1);
+      conversionBoundaries[j+1-cutoff] = round(pow(2, (j+1)*logSpectrumBandwidth)-1);
+    }
+  }
+  
+}
+
 // viewer main loop
 // calls display and does event processing
 int MySDLVU::MyMainLoop()
@@ -1884,31 +2923,28 @@ int MySDLVU::MyMainLoop()
   SDL_Surface * surface = SDL_GetVideoSurface();
   pfReshape(surface->w, surface->h);
   bool done = false;
-	int fftWait=0;
+  int fftWait=0;
 
   unsigned int soundPosition = 0;
   unsigned int hopToPosition = 0;
   FMOD_TIMEUNIT myTimeUnit = 1;
 
-  this->polycount = polygons->size();
-	this->poly2spec = new int[this->polycount];
-	spectrumIndex=0;
-	genSpec2PolyMapping(this->polycount, SPECTRUM_LENGTH/spectrumDivisor, specStartIndex);      //FIXME  here i constrain the effective spectrum we use in a shitty hardcoded way
-
-	findPlaneMaxima();
-
-	rvc=0;
-	generateRoofVertices();
-
-  this->genPoly2RasterFactors(raster_x, raster_y, raster_poly_search_distance);
-  this->genSpec2RasterMapping(raster_x, raster_y,0);
+  this->polycount = buildings->size();
+  
+  
+  conversionBoundaries = (int*) malloc(sizeof(int)*LOG_SPECTRUM_BANDS*2);
+  MyLogSpectrum = (float*) malloc(sizeof(float)*LOG_SPECTRUM_BANDS);
+  
+  
+  calculateConversionBoundaries();
+  
   
   imgSwitchTime_start = clock();
   
-  int myticks = SDL_GetTicks();
+  Uint32 myticks = SDL_GetTicks();
   int tempColorShiftTicks = 0;
   int colorShiftWaitTicks = 30;
-  int camTicks = SDL_GetTicks();
+  Uint32 camTicks = SDL_GetTicks();
   int camHopWaitTicks = 60;
   int tempCamHopTicks = 0;
   
@@ -1929,6 +2965,59 @@ int MySDLVU::MyMainLoop()
     (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_DrawBuildings);
   registerEvent_memberfunc("/asdf/image/prevnext",
     (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_loadNextImage);
+  registerEvent_memberfunc("/asdf/grid/polysearchdistance",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setRasterPolySearchDistance);
+  registerEvent_memberfunc("/asdf/grid/size",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setRasterSize);
+  registerEvent_memberfunc("/asdf/colors/top",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setColorsTop);
+  registerEvent_memberfunc("/asdf/colors/bottom",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setColorsBottom);
+  
+  registerEvent_memberfunc("/asdf/ltbattle/coordinates",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_ltbattle_recvCoords);
+  registerEvent_memberfunc("/asdf/ltbattle/cmd",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_ltbattle_cmd);
+  registerEvent_memberfunc("/asdf/ltbattle/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggle_ltbattlemode);
+  registerEvent_memberfunc("/asdf/ltbattle/brushsize",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_ltbattle_setbrushsize);
+  registerEvent_memberfunc("/asdf/ltbattle/evenpolygons/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_evenpolygons);
+  registerEvent_memberfunc("/asdf/ltbattle/minimumspecvar/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_osc_minimum_specvar);
+  registerEvent_memberfunc("/asdf/ltbattle/activestroke/minimumspecvar/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_osc_actstroke_specvar);
+  
+  registerEvent_memberfunc("/asdf/audio/logspectrum/size",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setLogSpectrumSize);
+  registerEvent_memberfunc("/asdf/audio/logspectrum/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleLogSpectrum);
+  registerEvent_memberfunc("/asdf/audio/logspectrum/lowcutoff/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setLogSpectrumLowCutoff);
+  registerEvent_memberfunc("/asdf/audio/spectrum/normalize/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleNormalizeSpectrum);
+  registerEvent_memberfunc("/asdf/audio/spectrum/adjustspectrumfreqsnamps/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleAdjustSpectrum_freqVSamp);
+  registerEvent_memberfunc("/asdf/audio/spectrum/normalizewithfixedmaxvalue/toggle",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggleNormalizeWithFixedValue);
+  registerEvent_memberfunc("/asdf/audio/spectrum/normalizewithfixedmaxvalue/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setFixedNormalizeMaxValue);
+  
+  
+  registerEvent_memberfunc("/asdf/fftgrid/colors/setrgb",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_fftgrid_color_rgb);
+  registerEvent_memberfunc("/asdf/fftgrid/spectrummultiplier/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_fftgrid_vert_multiply);
+  registerEvent_memberfunc("/asdf/buildings/colors/setrgb",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_building_color_rgb);
+  registerEvent_memberfunc("/asdf/buildings/spectrummultiplier/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_building_vert_multiply);
+  registerEvent_memberfunc("/asdf/buildings/minimumheight/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_building_min_height);
+  
+  float *stdSpecPtr = linearSpectrum;
+
 	while (!done) {
     //fmodsystem->update();
     
@@ -1939,7 +3028,7 @@ int MySDLVU::MyMainLoop()
       //oscMsgQ_CI msgIter = oscMsgQ.msgqueue.begin();
       deque<osc::ReceivedMessage*>::iterator msgIter = oscMsgQ.msgqueue.begin();
       for(; msgIter != oscMsgQ.msgqueue.end(); msgIter++) {
-        cout << "executing func for AddressPattern: " << (*msgIter)->AddressPattern() << endl;
+        //cout << "executing func for AddressPattern: " << (*msgIter)->AddressPattern() << endl;
         //try execute a registered func for msg
         execute(*msgIter);
         (*msgIter)->freeCopiedMessageBuffer();
@@ -1953,9 +3042,75 @@ int MySDLVU::MyMainLoop()
     
     
     if(updateSpectrum) {
+      MySpectrum = stdSpecPtr;
+      
       result = channel->getSpectrum(MySpectrum, SPECTRUM_LENGTH, 0, FMOD_DSP_FFT_WINDOW_TRIANGLE);
       ERRCHECK(result);
+      
+      
+      //fixme 
+      //maybe we can flatten the boost of higher frequencies a little out?
+      if(adjustSpectrum_freqVSamp) {
+        //specHeight = MySpectrum[this->spec2raster[x*rasterY+y]] * ((16000/SPECTRUM_LENGTH * (this->spec2raster[x*rasterY+y]))) * 50;
+        int nyquistrate = OUTPUTRATE/2; //44100/2 = 22050
+        for( int i=0; i<SPECTRUM_LENGTH; i++) {
+          MySpectrum[i] = MySpectrum[i] * (nyquistrate/SPECTRUM_LENGTH) * (i+1);
+        }
+      }
+      
+      if(normalizeaudiospectrumWithFixedValue) {
+      	for( int i=0; i<SPECTRUM_LENGTH; i++) {
+      		MySpectrum[i] = MySpectrum[i]*fixednormalizeMaxValue;
+      	}
+    	}
+    	
+      //normalize spectrum (code stolen shamelessly from max)
+      if(normalizeaudiospectrum) { 
+        float tempMaxSpec = 0;
+      	for( int i=0; i<SPECTRUM_LENGTH; i++) {
+      	  //spectrumAvg[i] = (spectrumLeft[i]+spectrumRight[i])/2.0;
+      		tempMaxSpec = ( MySpectrum[i] > tempMaxSpec ? MySpectrum[i] : tempMaxSpec );
+      	}
+      	tempMaxSpec = 1/tempMaxSpec;
+      	for( int i=0; i<SPECTRUM_LENGTH; i++) {
+      		MySpectrum[i] = MySpectrum[i]*tempMaxSpec;
+      	}
+    	}
+    	
+    	if(convertSpectrum2logScale) {
+        float tempSum=0;
+        for( int j=0; j<LOG_SPECTRUM_BANDS; j++ ) {
+      		tempSum = 0;
+      		for( int i=conversionBoundaries[j]; i<=conversionBoundaries[j+1]; i++){
+      			tempSum += MySpectrum[i];
+      		}
+      		MyLogSpectrum[j] = tempSum/( conversionBoundaries[j+1]-conversionBoundaries[j]+1 );
+      	}
+      	//fixme workaround for now:
+      	//evil pointing with pointers ...
+        MySpectrum = MyLogSpectrum;
+      }
+    	
     }
+    
+    
+    /* holy shmoly documentation sez:
+    
+      The larger the numvalues, the more CPU the FFT will take. Choose the right value to trade off between accuracy / speed.
+      The larger the numvalues, the more 'lag' the spectrum will seem to inherit. This is because the FFT window size stretches the analysis back in time to what was already played. For example if the numvalues size happened to be 44100 and the output rate was 44100 it would be analyzing the past second of data, and giving you the average spectrum over that time period.
+      If you are not displaying the result in dB, then the data may seem smaller than it should be. To display it you may want to normalize the data - that is, find the maximum value in the resulting spectrum, and scale all values in the array by 1 / max. (ie if the max was 0.5f, then it would become 1).
+      To get the spectrum for both channels of a stereo signal, call this function twice, once with channeloffset = 0, and again with channeloffset = 1. Then add the spectrums together and divide by 2 to get the average spectrum for both channels.
+      
+      //
+      FMOD_DSP_FFT_WINDOW_RECT, 
+      FMOD_DSP_FFT_WINDOW_TRIANGLE, 
+      FMOD_DSP_FFT_WINDOW_HAMMING, 
+      FMOD_DSP_FFT_WINDOW_HANNING, 
+      FMOD_DSP_FFT_WINDOW_BLACKMAN, 
+      FMOD_DSP_FFT_WINDOW_BLACKMANHARRIS,
+    */
+    
+    
     //ERRCHECK(result);
 //    printf("FPS: %f\n",GetFPS());
     channel->getPosition(&soundPosition,  FMOD_TIMEUNIT_MS);
@@ -2014,7 +3169,7 @@ int MySDLVU::MyMainLoop()
     //imageswitching
     imgSwitchTime_end = clock();
     imgSwitchTime = (double(imgSwitchTime_end)-double(imgSwitchTime_start))/CLOCKS_PER_SEC;
-    if(imgSwitchTime > SECS_PER_IMAGE ) {
+    if(AUTO_SWITCH_IMAGES == true && imgSwitchTime > SECS_PER_IMAGE ) {
       loadNextImage(1);
       imgSwitchTime_start = clock();
     }
@@ -2029,13 +3184,15 @@ int MySDLVU::MyMainLoop()
       camSwitchTime_start = clock();
     }
     
-    pfDisplay();
+    //if(buildings->size() > 0 && polygons->size() > 0) {
+      pfDisplay();
+    //}
     //usleep(5000);	//wtf?
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
       
-      if(krach_console_processEvents(event) == 1)
-        continue;
+      //if(krach_console_processEvents(event) == 1)
+      //  continue;
       
     	SDLMod mod = SDL_GetModState();
       switch (event.type) {
@@ -2058,6 +3215,34 @@ int MySDLVU::MyMainLoop()
           printf("--> FPS: %f <-- cull: %d mode:%d\n",GetFPS(), glIsEnabled(GL_CULL_FACE), State);
           
 					switch( event.key.keysym.sym ){
+					  
+					  case SDLK_y:
+					    if(mod & KMOD_SHIFT) {
+                adjustSpectrum_freqVSamp = !adjustSpectrum_freqVSamp;
+                cout << "adjustSpectrum_freqVSamp: " << adjustSpectrum_freqVSamp << endl;
+					    } else {
+					      cameraSwitchToggle = !cameraSwitchToggle;
+                printf("cameraSwitchToggle: %d\n",cameraSwitchToggle);
+					    }
+            break;
+            
+            case SDLK_t:
+              if(mod & KMOD_CTRL && mod & KMOD_SHIFT) {
+                convertSpectrum2logScale = !convertSpectrum2logScale;
+                cout << "convertSpectrum2logScale: " << convertSpectrum2logScale << endl;
+              } else if(mod & KMOD_CTRL) {
+                normalizeaudiospectrum = !normalizeaudiospectrum;
+                cout << "normalizeaudiospectrum: " << normalizeaudiospectrum << endl;
+              } else if(mod & KMOD_SHIFT) {
+                lt_int_shape.clear();
+                freePolygonList(*polygons);
+                freeBuildingList(*buildings);
+                buildings->clear();
+              } else {
+                fake_osc_input();
+              }
+              
+            break;
 						case SDLK_RIGHT:
               //hopToPosition = soundPosition + 10000;
               //result = channel->setPosition(hopToPosition, FMOD_TIMEUNIT_MS);
@@ -2094,6 +3279,7 @@ int MySDLVU::MyMainLoop()
 							start = clock();
 							
 							this->genSpec2RasterMapping(raster_x, raster_y, 0);
+							this->GenerateFFTGridVertexArray(raster_x, raster_y);
 							
 							finish = clock();
 							mytime = (double(finish)-double(start))/CLOCKS_PER_SEC;
@@ -2136,6 +3322,7 @@ int MySDLVU::MyMainLoop()
 								start = clock();
 								
 								this->genSpec2RasterMapping(raster_x, raster_y, 0);
+								this->GenerateFFTGridVertexArray(raster_x, raster_y);
 								
 								finish = clock();
 								mytime = (double(finish)-double(start))/CLOCKS_PER_SEC;
@@ -2162,13 +3349,10 @@ int MySDLVU::MyMainLoop()
                 channel->setMute(muteToggle);
                 printf("muteToggle: %d\n",muteToggle);
                 updateSpectrum = !updateSpectrum;
-                CON_Out(Consoles[0], "muteToggle: %d\n",muteToggle);
+                //CON_Out(Consoles[0], "muteToggle: %d\n",muteToggle);
 						break;
             
-            case SDLK_y:
-                cameraSwitchToggle = !cameraSwitchToggle;
-                printf("cameraSwitchToggle: %d\n",cameraSwitchToggle);
-						break;
+            
             
             case SDLK_e:
                 motionToggleModifier = !motionToggleModifier;
@@ -2261,7 +3445,7 @@ int MySDLVU::MyMainLoop()
   //FIXME this is ugly!
   //midi finalize:
 //  finalize();
-  
+  exit(0); //for gprof
   SDL_Quit();
   return 0;
 }
@@ -2291,7 +3475,7 @@ int main(int argc, char *argv[])
   int windowX, windowY;
   Uint32 myuserflags = SDL_OPENGL;
   //sdl_console:
-  myuserflags |= SDL_HWSURFACE | SDL_ASYNCBLIT | SDL_OPENGLBLIT;
+  //myuserflags |= SDL_HWSURFACE | SDL_ASYNCBLIT | SDL_OPENGLBLIT;
   //no frame
   //myuserflags |= SDL_NOFRAME;
   
@@ -2546,7 +3730,21 @@ int main(int argc, char *argv[])
     }
     ERRCHECK(result);
 
+    /*
+    fixme  check out better sampling interpolation modes
+      FMOD_DSP_RESAMPLER_NOINTERP
+      No interpolation. High frequency aliasing hiss will be audible depending on the sample rate of the sound.
 
+      FMOD_DSP_RESAMPLER_LINEAR
+      Linear interpolation (default method). Fast and good quality, causes very slight lowpass effect on low frequency sounds.
+
+      FMOD_DSP_RESAMPLER_CUBIC
+      Cubic interoplation. Slower than linear interpolation but better quality.
+
+      FMOD_DSP_RESAMPLER_SPLINE
+      5 point spline interoplation. Slowest resampling method but best quality.
+    
+    */
     result = fmodsystem->setSoftwareFormat(OUTPUTRATE, FMOD_SOUND_FORMAT_PCM16, 2, 0, FMOD_DSP_RESAMPLER_LINEAR);
     ERRCHECK(result);
 
@@ -2675,7 +3873,8 @@ int main(int argc, char *argv[])
   glDepthMask(GL_TRUE);
   glShadeModel(GL_SMOOTH);
   //glShadeModel(GL_FLAT);
-  glEnable(GL_CULL_FACE);
+  
+  //glEnable(GL_CULL_FACE);
   
 	//float myLight[] = { 0.1, 0.6, 0.9, 0.9 };
 	//glLightfv(GL_LIGHT0, GL_AMBIENT, myLight);
@@ -2695,9 +3894,9 @@ int main(int argc, char *argv[])
   float aspect = 1;
   float near = 0.1f; // near plane distance relative to model diagonal length
   float far = 100.0f; // far plane distance (also relative)*/
-  Vec3f up(0.002, 0.999, 0.038);
-  Vec3f lookatcntr(14.505, -17.658, 47.381);
-  Vec3f eye(14.496, -17.697, 48.380);
+  Vec3f up(0.0, 1.0, 0.0);
+  Vec3f lookatcntr(64, -48.00, 0.00);
+  Vec3f eye(64, -48.00, 117.00);
   float yfov = 45;
   float aspect = 1;
   float near = 1.0f; // near plane distance relative to model diagonal length
@@ -2706,24 +3905,37 @@ int main(int argc, char *argv[])
                    up, yfov, aspect, near, far);
 
   
-  if(krach_console_startup() != 0) {
-    exit(1);
-  }
+  //if(krach_console_startup() != 0) {
+  //  exit(1);
+  //}
   
   ///*
   int oscport = OSC_PORT;
 	std::cout << "listening for osc input \n";
-  listen_for_osc_packets(oscport);
+  
+  //if(!develmode_fast_startup) {
+    listen_for_osc_packets(oscport);
+  //}
   //*/
   
   sdlvu.MyMainLoop();
-  krach_console_shutdown();
+  //krach_console_shutdown();
 	sound->release();
   fmodsystem->close();
   fmodsystem->release();
   return 0;
 }
 /* yeah 'd' dumps the camera data.
+3200x2400:
+Vec3f lookatcntr(64, -48.00, 0.00);
+Vec3f eye(64, -48.00, 117.00);
+
+HOLY GRL grail: (for 1024x768)
+Vec3f up(0.0, 1.0, 0.0);
+Vec3f lookatcntr(20.48, -16.00, 0.00);
+Vec3f eye(20.48, -16.00, 37.00);
+
+
 --- CURRENT CAM PARAMS ---
        Eye: (14.496, -17.697, 48.380)
 LookAtCntr: (14.505, -17.658, 47.381)
@@ -2754,3 +3966,31 @@ LookAtCntr: (14.505, -17.658, 47.381)
               Far: 2402.979248
 */
 /////
+void MySDLVU::fake_osc_input() {
+  srand(time(NULL));
+  int x=rand() % (1024 - 0 + 1);
+  int y=rand() % (768 - 0 + 1);
+  cout << "fake coords: " << x << " " << y << endl;
+  lt_int_shape.push_back(x);
+  lt_int_shape.push_back(y);
+  process_lt_coords();
+}
+
+void MySDLVU::fake_init_vertexarrays() {
+  lt_int_shape.clear();
+  lt_int_shape.push_back(0);
+  lt_int_shape.push_back(0);
+  int x=0;
+  int y=0;
+  for(int i=1;i<100;i++) {
+    x=i;
+    y=768-i;
+    lt_int_shape.push_back(x);
+    lt_int_shape.push_back(y);
+    process_lt_coords();
+    lt_int_shape.push_back(0);
+    lt_int_shape.push_back(0);
+    process_lt_coords();
+  }
+}
+

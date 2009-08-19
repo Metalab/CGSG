@@ -28,7 +28,7 @@ int asdfEventHandler::registerEvent_memberfunc(string pattern, void(asdfEventHan
 
 int asdfEventHandler::execute(osc::ReceivedMessage *oscmsg) {
   //lookup registered event
-  cout << "msgPattern: " << oscmsg->AddressPattern() << endl;
+  //cout << "msgPattern: " << oscmsg->AddressPattern() << endl;
   //cout << "registered patterns: " << registeredEvents.size() << endl;
   vector<ASDFevent>::iterator revs_I = registeredEvents.begin();
   

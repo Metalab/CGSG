@@ -36,7 +36,7 @@ struct Point2D {
 
 struct Point3D {
   int x,y,z;
-  GLdouble dx,dy,dz;
+  //GLdouble dx,dy,dz;
   
   //GLdouble v[3];
   int *tessOrder;
@@ -70,6 +70,9 @@ class Building {
 };
 
 typedef std::vector<Building*> BuildingList;
+
+void freePolygonList(PolygonList& list);
+void freeBuildingList(BuildingList& list);
 
 class MapFragment {
   public:

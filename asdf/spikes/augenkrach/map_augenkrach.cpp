@@ -45,9 +45,13 @@ void freePolygonList(PolygonList& list) {
 
 void freeBuildingList(BuildingList& list) {
   BuildingList::iterator begin = list.begin(), end=list.end();
-  for(; begin != end; begin++)
+  for(; begin != end; begin++) {
+    delete (*begin)->poly;
+    delete (*begin)->orderedVertices;
+    delete (*begin)->rasterPoints2affect;
     delete *begin;
-
+  }
+  
   list.clear();
 }
 
@@ -280,9 +284,6 @@ PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
       (*bpoly)[i].x = x;
       (*bpoly)[i].y = y;
       (*bpoly)[i].z = 0;
-      (*bpoly)[i].dx = (GLdouble)x;
-      (*bpoly)[i].dy = (GLdouble)y;
-      (*bpoly)[i].dz = (GLdouble)0;
       //tmpX += x;
       //tmpY += y;
       

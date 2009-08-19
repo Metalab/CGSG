@@ -14,6 +14,9 @@ osc_test: osc_test.cpp
 event_osc_test: event_osc_test.cpp
 	g++ oscReceive.cpp oscmsgqueue.cpp asdf_eventhandler.cpp $^ $(CFLAGS) $(LIBS) -o $@
 
+asdf: augenkrach.cpp
+	g++ map_augenkrach.cpp oscReceive.cpp oscmsgqueue.cpp asdf_eventhandler.cpp $^ $(CFLAGS) $(LIBS) -o $@
+		
 augenkrach: augenkrach.cpp
 	g++ map_augenkrach.cpp krach_console.c split.c oscReceive.cpp oscmsgqueue.cpp asdf_eventhandler.cpp $^ $(CFLAGS) $(LIBS) -o $@
 

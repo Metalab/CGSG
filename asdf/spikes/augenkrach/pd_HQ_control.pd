@@ -1,103 +1,105 @@
-#N canvas 506 69 754 522 10;
+#N canvas 495 28 754 522 10;
 #X text -25 7 asdf command & control center;
-#X obj 579 231 hradio 15 1 0 8 CameraSelect CameraSelect CameraSelect
-0 -8 0 10 -262144 -1 -1 3;
-#X floatatom 579 250 5 0 0 0 - - -;
+#X obj 581 260 hradio 15 1 0 8 CameraSelect CameraSelect CameraSelect
+0 -8 0 10 -262144 -1 -1 4;
+#X floatatom 581 279 5 0 0 0 - - -;
 #X obj 170 57 bng 35 250 50 0 bnextimage empty next_image 38 7 0 10
 -262144 -1 -1;
 #X obj 169 14 bng 35 250 50 0 bprevimage empty prev_image 38 7 0 10
 -262144 -1 -1;
-#X obj 315 464 tgl 15 0 RoofsToggle RoofsToggle RoofsToggle 17 7 0
-10 -262144 -1 -1 1 1;
-#X obj 173 113 hsl 128 30 0 1000 0 0 polySearchDist polySearchDist
-polySearchDist -2 -8 0 10 -262144 -1 -1 1400 1;
-#X obj 170 147 i;
-#X obj 315 419 tgl 15 0 gridToggle gridToggle gridToggle 17 7 0 10
--262144 -1 -1 0 1;
-#X obj 170 246 vsl 30 128 1 8192 1 1 gridSize_x gridSize_x gridSize_x
-0 -9 0 10 -262144 -1 -1 6200 1;
-#X obj 238 247 vsl 30 128 1 8192 1 1 gridSize_y gridSize_y gridSize_y
-0 -9 0 10 -262144 -1 -1 6500 1;
-#X obj 32 245 vsl 30 127 4 8192 0 1 logarithmicSpecSize logarithmicSpecSize
-logarithmicSpecSize 0 -23 0 10 -262144 -1 -1 12600 1;
-#X obj 32 383 i;
-#X floatatom 32 407 5 0 0 0 - - -;
-#X obj 33 180 tgl 15 0 LogSpectrum LogSpectrum LogSpectrum 17 7 0 10
+#X obj 317 493 tgl 15 0 RoofsToggle RoofsToggle RoofsToggle 17 7 0
+10 -262144 -1 -1 0 1;
+#X obj 175 142 hsl 128 30 0 1000 0 0 polySearchDist polySearchDist
+polySearchDist -2 -8 0 10 -262144 -1 -1 2700 1;
+#X obj 172 176 i;
+#X obj 317 448 tgl 15 0 gridToggle gridToggle gridToggle 17 7 0 10
 -262144 -1 -1 1 1;
-#X obj -11 111 tgl 15 0 normalizeAudio normalizeAudio normalizeAudio
+#X obj 172 275 vsl 30 128 1 8192 1 1 gridSize_x gridSize_x gridSize_x
+0 -9 0 10 -262144 -1 -1 5862 1;
+#X obj 240 276 vsl 30 128 1 8192 1 1 gridSize_y gridSize_y gridSize_y
+0 -9 0 10 -262144 -1 -1 6841 1;
+#X obj 34 274 vsl 30 127 4 8192 0 1 logarithmicSpecSize logarithmicSpecSize
+logarithmicSpecSize 0 -23 0 10 -262144 -1 -1 12600 1;
+#X obj 34 412 i;
+#X floatatom 34 436 5 0 0 0 - - -;
+#X obj 35 216 tgl 15 0 LogSpectrum LogSpectrum LogSpectrum 17 7 0 10
+-262144 -1 -1 1 1;
+#X obj -9 162 tgl 15 0 normalizeAudio normalizeAudio normalizeAudio
 17 7 0 10 -262144 -1 -1 0 1;
-#X obj -11 135 tgl 15 0 adjust_spectrumAmps adjust_spectrumAmps adjust_spectrumAmps
+#X obj -9 181 tgl 15 0 adjust_spectrumAmps adjust_spectrumAmps adjust_spectrumAmps
 17 7 0 10 -262144 -1 -1 1 1;
-#X obj -11 158 tgl 15 0 normalizeWfixedVal normalizeWfixedVal normalizeWfixedVal
+#X obj -9 200 tgl 15 0 normalizeWfixedVal normalizeWfixedVal normalizeWfixedVal
 17 7 0 10 -262144 -1 -1 1 1;
-#X obj -11 245 vsl 30 128 0.0001 127 1 0 fixedNormalizeVal fixedNormalizeVal
-fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 5900 1;
-#X floatatom -11 383 5 0 0 0 - - -;
-#X obj -11 180 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
--1 -1;
-#X obj 494 316 vsl 30 128 0.0001 16384 0 1 fftgrid_vertex_Multi fftgrid_vertex_Multi
-fftgrid_vertex_Multi 0 -23 0 10 -262144 -1 -1 812 1;
-#X floatatom 494 456 5 0 0 0 - - -;
-#X obj 451 315 vsl 30 128 0.0001 16384 0 1 buildings_vertex_Multi buildings_vertex_Multi
-buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 5818 1;
-#X floatatom 451 453 5 0 0 0 - - -;
-#X obj 425 114 vsl 30 127 0.001 127 0 0 fftgridRGB_R fftgridRGB_R fftgridRGB_R
+#X obj -9 274 vsl 30 128 0.0001 127 1 0 fixedNormalizeVal fixedNormalizeVal
+fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 4800 1;
+#X floatatom -9 412 5 0 0 0 - - -;
+#X obj -9 231 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 496 345 vsl 30 128 0.0001 16384 0 1 fftgrid_vertex_Multi fftgrid_vertex_Multi
+fftgrid_vertex_Multi 0 -23 0 10 -262144 -1 -1 8400 1;
+#X floatatom 496 485 5 0 0 0 - - -;
+#X obj 453 344 vsl 30 128 0.0001 16384 0 1 buildings_vertex_Multi buildings_vertex_Multi
+buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 300 1;
+#X floatatom 453 482 5 0 0 0 - - -;
+#X obj 427 143 vsl 30 127 0.001 127 0 0 fftgridRGB_R fftgridRGB_R fftgridRGB_R
 0 -9 0 10 -262144 -1 -1 55 1;
-#X obj 460 114 vsl 30 127 0.001 127 0 0 fftgridRGB_G fftgridRGB_G fftgridRGB_G
-0 -23 0 10 -262144 -1 -1 55 1;
-#X obj 494 114 vsl 30 127 0.001 127 0 0 fftgridRGB_B fftgridRGB_B fftgridRGB_B
+#X obj 462 143 vsl 30 127 0.001 127 0 0 fftgridRGB_G fftgridRGB_G fftgridRGB_G
+0 -23 0 10 -262144 -1 -1 54 1;
+#X obj 496 143 vsl 30 127 0.001 127 0 0 fftgridRGB_B fftgridRGB_B fftgridRGB_B
 0 -37 0 10 -262144 -1 -1 55 1;
-#X floatatom 426 249 5 0 0 0 - - -;
-#X floatatom 459 248 5 0 0 0 - - -;
-#X floatatom 494 248 5 0 0 0 - - -;
-#X obj 314 114 vsl 30 127 0.001 1 0 0 buildingsRGB_R buildingsRGB_R
-buildingsRGB_R 0 -9 0 10 -262144 -1 -1 12000 1;
-#X obj 347 114 vsl 30 127 0.001 1 0 0 buildingsRGB_G buildingsRGB_G
+#X floatatom 428 278 5 0 0 0 - - -;
+#X floatatom 461 277 5 0 0 0 - - -;
+#X floatatom 496 277 5 0 0 0 - - -;
+#X obj 316 143 vsl 30 127 0.001 1 0 0 buildingsRGB_R buildingsRGB_R
+buildingsRGB_R 0 -9 0 10 -262144 -1 -1 11800 1;
+#X obj 349 143 vsl 30 127 0.001 1 0 0 buildingsRGB_G buildingsRGB_G
 buildingsRGB_G 0 -23 0 10 -262144 -1 -1 5600 1;
-#X obj 382 114 vsl 30 127 0.001 1 0 0 buildingsRGB_B buildingsRGB_B
-buildingsRGB_B 0 -37 0 10 -262144 -1 -1 77 1;
-#X floatatom 314 249 5 0 0 0 - - -;
-#X floatatom 348 249 5 0 0 0 - - -;
-#X floatatom 382 248 5 0 0 0 - - -;
-#X obj 313 312 vsl 30 64 0.1 1024 0 1 buildings_minHeight buildings_minHeight
-buildings_minHeight 0 -9 0 10 -262144 -1 -1 82 1;
-#X floatatom 313 390 5 0 0 0 - - -;
-#X obj 77 246 vsl 30 127 0 8192 0 0 logspectrum_lowCutoff logspectrum_lowCutoff
-logspectrum_lowCutoff 0 -38 0 10 -262144 -1 -1 200 1;
-#X floatatom 77 382 5 0 0 0 - - -;
+#X obj 384 143 vsl 30 127 0.001 1 0 0 buildingsRGB_B buildingsRGB_B
+buildingsRGB_B 0 -37 0 10 -262144 -1 -1 577 1;
+#X floatatom 316 278 5 0 0 0 - - -;
+#X floatatom 350 278 5 0 0 0 - - -;
+#X floatatom 384 277 5 0 0 0 - - -;
+#X obj 315 341 vsl 30 64 0.1 1024 0 1 buildings_minHeight buildings_minHeight
+buildings_minHeight 0 -9 0 10 -262144 -1 -1 800 1;
+#X floatatom 315 419 5 0 0 0 - - -;
+#X obj 79 275 vsl 30 127 0 8192 0 0 logspectrum_lowCutoff logspectrum_lowCutoff
+logspectrum_lowCutoff 0 -38 0 10 -262144 -1 -1 45 1;
+#X floatatom 79 411 5 0 0 0 - - -;
 #X obj 278 56 tgl 15 0 LTevenPolygons LTevenPolygons LTevenPolygons
-17 7 0 10 -262144 -1 -1 0 1;
+17 7 0 10 -262144 -1 -1 1 1;
 #X obj 278 15 tgl 35 0 LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE
 37 7 0 10 -262144 -1 -1 0 1;
-#X obj 352 312 vsl 30 64 0.0001 5 0 1 LT_minimumSPECvar LT_minimumSPECvar
+#X obj 354 341 vsl 30 64 0.0001 5 0 1 LT_minimumSPECvar LT_minimumSPECvar
 LT_minimumSPECvar 0 -23 0 10 -262144 -1 -1 0 1;
-#X floatatom 352 390 5 0 0 0 - - -;
-#X floatatom 204 429 5 0 0 0 - gridsize_mul -;
-#X obj 392 313 vsl 30 64 0.0001 5 0 1 LT_activeStrokeMIN_SPECvar LT_activeStrokeMIN_SPECvar
+#X floatatom 354 419 5 0 0 0 - - -;
+#X floatatom 206 458 5 0 0 0 - gridsize_mul -;
+#X obj 394 342 vsl 30 64 0.0001 5 0 1 LT_activeStrokeMIN_SPECvar LT_activeStrokeMIN_SPECvar
 LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
-#X floatatom 392 390 5 0 0 0 - - -;
-#X floatatom 170 168 5 0 0 0 - - -;
-#X obj 315 442 tgl 15 0 BuildingsToggle BuildingsToggle BuildingsToggle
-17 7 0 10 -262144 -1 -1 1 1;
+#X floatatom 394 419 5 0 0 0 - - -;
+#X floatatom 172 197 5 0 0 0 - - -;
+#X obj 317 471 tgl 15 0 BuildingsToggle BuildingsToggle BuildingsToggle
+17 7 0 10 -262144 -1 -1 0 1;
 #X text -25 24 scriptythekid 2008/2009;
-#X obj 170 382 i;
-#X obj 238 384 i;
-#X floatatom 169 405 5 0 0 0 - - -;
-#X floatatom 237 405 5 0 0 0 - - -;
+#X obj 172 411 i;
+#X obj 240 413 i;
+#X floatatom 171 434 5 0 0 0 - - -;
+#X floatatom 239 434 5 0 0 0 - - -;
 #X obj -17 57 tgl 35 0 oscConnect oscConnect oscConnect 0 -7 0 10 -262144
--1 -1 1 1;
-#X obj 48 58 bng 35 250 50 0 flushValuesToASDF flushValuesToASDF flushValuesToASDF
+-1 -1 0 1;
+#X obj 65 57 bng 35 250 50 0 flushValuesToASDF flushValuesToASDF flushValuesToASDF
 0 -7 0 10 -262144 -1 -1;
-#X obj 579 85 r beats;
-#X floatatom 579 133 5 0 0 0 - - -;
-#X obj 579 153 i;
-#X obj 579 194 / 10;
-#X obj 579 109 spigot;
-#X obj 627 93 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 581 114 r beats;
+#X floatatom 581 162 5 0 0 0 - - -;
+#X obj 581 182 i;
+#X obj 581 223 / 10;
+#X obj 581 138 spigot;
+#X obj 629 122 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X obj 579 173 spigot;
-#X obj 612 153 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
+#X obj 581 202 spigot;
+#X obj 614 182 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
+#X msg -14 106 localhost 2345;
+#X obj -14 128 s asdfhostport;
 #X connect 1 0 2 0;
 #X connect 6 0 7 0;
 #X connect 7 0 48 0;
@@ -123,6 +125,7 @@ LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
 #X connect 46 0 47 0;
 #X connect 51 0 53 0;
 #X connect 52 0 54 0;
+#X connect 55 0 65 0;
 #X connect 57 0 61 0;
 #X connect 58 0 59 0;
 #X connect 59 0 63 0;
@@ -131,3 +134,4 @@ LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
 #X connect 62 0 61 1;
 #X connect 63 0 60 0;
 #X connect 64 0 63 1;
+#X connect 65 0 66 0;

@@ -34,24 +34,13 @@ struct Point2D {
   Point2D() { }
 };
 
-struct Point3D {
-  int x,y,z;
-  //GLdouble dx,dy,dz;
-  
-  //GLdouble v[3];
-  int *tessOrder;
-  
-  Point3D(int x, int y, int z) { this->x = x; this->y = y; this->z = z;}
-	//Point3D(int x, int y) { this->x = x; this->y = y; }
-  Point3D() { }
-};
 
 struct Raster2VertexFactor {
   int rasterpoint;
   float distance;
 };
 
-typedef std::vector<Point3D> Polygon;
+typedef std::vector<Point2D> Polygon;
 typedef std::vector<Polygon*> PolygonList;
 
 typedef std::vector<int> VertexIndexList;
@@ -67,6 +56,8 @@ class Building {
     GLfloat fCenterX, fCenterY;
     GLfloat fmeanCenterX, fmeanCenterY;
     int debugflag;
+    //array of pointers to MySpectrum (fft array) for faster spectrumvar lookups/comparisons for each building.
+    float **speclookuptable;
 };
 
 typedef std::vector<Building*> BuildingList;

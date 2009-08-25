@@ -260,6 +260,9 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     void DrawMeanCenter(Building &building, float height);
     float GetSpecValByBuilding(Building &building, float height);
     float GetUnmangledSpecValByBuilding(Building &building);
+    
+    float GetUnmangledSpecValByBuilding_perftest(Building &building);
+		
 		GLfloat maxX, maxY, minX, minY;
     float asdf_maxx, asdf_minx, asdf_maxy, asdf_miny;
     
@@ -279,6 +282,8 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     void DrawCentroid2GridLines(Building &building, float height, float gridHeight, int rasterX, int rasterY);
     void loadImage(int x, int y);
     
+    void genPoly2RasterFactorForBuilding(int rasterX, int rasterY, float maxDistance, Building *thebuilding);
+    void generate_specLookupForBuilding(Building &building);
     //void dumpGeometryData(char *filename);
     
   int currentImage;
@@ -388,7 +393,7 @@ class MySDLVU : public SDLVU, public asdfEventHandler
   void addBuilding2VertexArray(Building *building);
   void calcCentroidForBuilding(Building*);
   
-  void genPoly2RasterFactorForBuilding(int rasterX, int rasterY, float maxDistance, Building *thebuilding);
+  
   
   void fake_init_vertexarrays();
   void fake_osc_input();
@@ -813,6 +818,27 @@ float MySDLVU::GetUnmangledSpecValByBuilding(Building &building) {
   return specVar;
 }
 
+void MySDLVU::generate_specLookupForBuilding(Building &building) {
+  Raster2VertexList *rasterPointList = building.rasterPoints2affect;
+  delete[] building.speclookuptable;
+  building.speclookuptable = new float*[rasterPointList->size()];
+  int idx = 0;
+  for(int i=0;i < rasterPointList->size(); i++ ) {
+    //store pointers to mySpectrum directly
+    int idx = spec2raster[ (*rasterPointList)[i].rasterpoint ];
+    building.speclookuptable[i] = MySpectrum + idx;
+  }
+}
+
+float MySDLVU::GetUnmangledSpecValByBuilding_perftest(Building &building) {
+  float specVar = 0;
+  Raster2VertexList *rasterPointList = building.rasterPoints2affect;
+  for(int i=0;i < rasterPointList->size(); i++ ) {
+    specVar = *(building.speclookuptable[i]) > specVar ? *(building.speclookuptable[i]) : specVar;
+  }
+  return specVar;
+}
+
 float MySDLVU::GetSpecValByBuilding(Building &building, float height) {
   float specVar = 0;
 
@@ -1221,6 +1247,7 @@ void MySDLVU::genPoly2RasterFactorForBuilding(int rasterX, int rasterY, float ma
       }
       
     //}
+    generate_specLookupForBuilding(*thebuilding);
 }
 
 /* search in a bounding box, near the centroid of the building, instead of the whole grid:
@@ -1244,8 +1271,8 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
     ///*
     int minRP = 0;
     int maxRP = 0;
-    BuildingList::const_iterator build, buildend;
-    PolygonList::const_iterator poly, polyend;
+    BuildingList::iterator build, buildend;
+    PolygonList::iterator poly, polyend;
     build = buildings->begin();
     buildend = buildings->end();
     float dist = 0;
@@ -1288,6 +1315,7 @@ void MySDLVU::genPoly2RasterFactors(int rasterX, int rasterY, float maxDistance)
           }
         }
       }
+      generate_specLookupForBuilding(*building);
     }
     //printf("\nminRP: %d\t",minRP);
     //printf("maxRP: %d\t\n",maxRP);
@@ -1567,7 +1595,7 @@ void MySDLVU::Display()
   Building *prevBuild;
   if(buildings->size() > 0) {
     
-    lastSpecVar = GetUnmangledSpecValByBuilding(**build);
+    lastSpecVar = GetUnmangledSpecValByBuilding_perftest(**build);
     
     prevBuild = *build;
   }
@@ -1582,7 +1610,7 @@ void MySDLVU::Display()
         //s = osc_minimum_specvar;
         //lastSpecVar = osc_minimum_specvar;
       } else {
-        s = GetUnmangledSpecValByBuilding(**build);
+        s = GetUnmangledSpecValByBuilding_perftest(**build);
       }
       
       //minimum specvar for everything... so stuff is visible even without audio. adjustable via osc
@@ -2794,6 +2822,7 @@ void MySDLVU::create_building_from_lasercoord() {
   (*building).orderedVertices = new VertexIndexList();
   VertexIndexList* vil = (*building).orderedVertices;
   (*building).rasterPoints2affect = new Raster2VertexList();
+  (*building).speclookuptable = new float*[1];
   
   float x,y,x2,y2,x3,y3,x4,y4;
   x=0;y=0;x2=0;y2=0;x3=0;y3=0;x4=0;y4=0;
@@ -3453,7 +3482,7 @@ int MySDLVU::MyMainLoop()
     SDL_mutexV(oscMsgQmutex);
     // OSC msg processing
     
-    if(lt_playback_mode) {
+    if(lt_playback_mode && lasertagbattlemode) {
       lt_playback();
     }
     

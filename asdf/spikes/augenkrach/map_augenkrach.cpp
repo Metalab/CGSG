@@ -49,6 +49,7 @@ void freeBuildingList(BuildingList& list) {
     delete (*begin)->poly;
     delete (*begin)->orderedVertices;
     delete (*begin)->rasterPoints2affect;
+    delete (*begin)->speclookuptable;
     delete *begin;
   }
   
@@ -257,7 +258,7 @@ PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
     (*building).orderedVertices = new VertexIndexList();
     VertexIndexList* vil = (*building).orderedVertices;
     (*building).rasterPoints2affect = new Raster2VertexList();
-
+    (*building).speclookuptable = new float*[1];
 
     
     for (int i=0; i < polys->total; i++) {
@@ -283,7 +284,7 @@ PolygonList& ViennaMap::loadFragment(int fragX, int fragY) {
       
       (*bpoly)[i].x = x;
       (*bpoly)[i].y = y;
-      (*bpoly)[i].z = 0;
+
       //tmpX += x;
       //tmpY += y;
       

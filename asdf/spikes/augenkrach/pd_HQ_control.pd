@@ -1,91 +1,91 @@
-#N canvas 495 28 754 522 10;
+#N canvas 687 22 754 522 10;
 #X text -25 7 asdf command & control center;
-#X obj 581 260 hradio 15 1 0 8 CameraSelect CameraSelect CameraSelect
-0 -8 0 10 -262144 -1 -1 4;
+#X obj 581 260 hradio 15 1 1 8 CameraSelect CameraSelect CameraSelect
+0 -8 0 10 -262144 -1 -1 0;
 #X floatatom 581 279 5 0 0 0 - - -;
 #X obj 170 57 bng 35 250 50 0 bnextimage empty next_image 38 7 0 10
 -262144 -1 -1;
 #X obj 169 14 bng 35 250 50 0 bprevimage empty prev_image 38 7 0 10
 -262144 -1 -1;
-#X obj 317 493 tgl 15 0 RoofsToggle RoofsToggle RoofsToggle 17 7 0
-10 -262144 -1 -1 0 1;
-#X obj 175 142 hsl 128 30 0 1000 0 0 polySearchDist polySearchDist
-polySearchDist -2 -8 0 10 -262144 -1 -1 2700 1;
+#X obj 317 493 tgl 15 1 RoofsToggle RoofsToggle RoofsToggle 17 7 0
+10 -262144 -1 -1 1 1;
+#X obj 175 142 hsl 128 30 0 1000 0 1 polySearchDist polySearchDist
+polySearchDist -2 -8 0 10 -262144 -1 -1 3800 1;
 #X obj 172 176 i;
-#X obj 317 448 tgl 15 0 gridToggle gridToggle gridToggle 17 7 0 10
--262144 -1 -1 1 1;
+#X obj 317 448 tgl 15 1 gridToggle gridToggle gridToggle 17 7 0 10
+-262144 -1 -1 0 1;
 #X obj 172 275 vsl 30 128 1 8192 1 1 gridSize_x gridSize_x gridSize_x
-0 -9 0 10 -262144 -1 -1 5862 1;
+0 -9 0 10 -262144 -1 -1 5863 1;
 #X obj 240 276 vsl 30 128 1 8192 1 1 gridSize_y gridSize_y gridSize_y
-0 -9 0 10 -262144 -1 -1 6841 1;
+0 -9 0 10 -262144 -1 -1 5865 1;
 #X obj 34 274 vsl 30 127 4 8192 0 1 logarithmicSpecSize logarithmicSpecSize
-logarithmicSpecSize 0 -23 0 10 -262144 -1 -1 12600 1;
+logarithmicSpecSize 0 -23 0 10 -262144 -1 -1 8199 1;
 #X obj 34 412 i;
 #X floatatom 34 436 5 0 0 0 - - -;
-#X obj 35 216 tgl 15 0 LogSpectrum LogSpectrum LogSpectrum 17 7 0 10
+#X obj 35 216 tgl 15 1 LogSpectrum LogSpectrum LogSpectrum 17 7 0 10
 -262144 -1 -1 1 1;
-#X obj -9 162 tgl 15 0 normalizeAudio normalizeAudio normalizeAudio
+#X obj -9 162 tgl 15 1 normalizeAudio normalizeAudio normalizeAudio
 17 7 0 10 -262144 -1 -1 0 1;
-#X obj -9 181 tgl 15 0 adjust_spectrumAmps adjust_spectrumAmps adjust_spectrumAmps
+#X obj -9 181 tgl 15 1 adjust_spectrumAmps adjust_spectrumAmps adjust_spectrumAmps
 17 7 0 10 -262144 -1 -1 1 1;
-#X obj -9 200 tgl 15 0 normalizeWfixedVal normalizeWfixedVal normalizeWfixedVal
+#X obj -9 200 tgl 15 1 normalizeWfixedVal normalizeWfixedVal normalizeWfixedVal
 17 7 0 10 -262144 -1 -1 1 1;
-#X obj -9 274 vsl 30 128 0.0001 127 1 0 fixedNormalizeVal fixedNormalizeVal
-fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 4800 1;
+#X obj -9 274 vsl 30 128 0.0001 127 1 1 fixedNormalizeVal fixedNormalizeVal
+fixedNormalizeVal 0 -9 0 10 -262144 -1 -1 4000 1;
 #X floatatom -9 412 5 0 0 0 - - -;
 #X obj -9 231 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
 -1;
 #X obj 496 345 vsl 30 128 0.0001 16384 0 1 fftgrid_vertex_Multi fftgrid_vertex_Multi
-fftgrid_vertex_Multi 0 -23 0 10 -262144 -1 -1 8400 1;
+fftgrid_vertex_Multi 0 -23 0 10 -262144 -1 -1 2630 1;
 #X floatatom 496 485 5 0 0 0 - - -;
 #X obj 453 344 vsl 30 128 0.0001 16384 0 1 buildings_vertex_Multi buildings_vertex_Multi
-buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 300 1;
+buildings_vertex_Multi 0 -9 0 10 -262144 -1 -1 4807 1;
 #X floatatom 453 482 5 0 0 0 - - -;
-#X obj 427 143 vsl 30 127 0.001 127 0 0 fftgridRGB_R fftgridRGB_R fftgridRGB_R
-0 -9 0 10 -262144 -1 -1 55 1;
-#X obj 462 143 vsl 30 127 0.001 127 0 0 fftgridRGB_G fftgridRGB_G fftgridRGB_G
-0 -23 0 10 -262144 -1 -1 54 1;
-#X obj 496 143 vsl 30 127 0.001 127 0 0 fftgridRGB_B fftgridRGB_B fftgridRGB_B
-0 -37 0 10 -262144 -1 -1 55 1;
+#X obj 427 143 vsl 30 127 0.001 1 0 1 fftgridRGB_R fftgridRGB_R fftgridRGB_R
+0 -9 0 10 -262144 -1 -1 3000 1;
+#X obj 462 143 vsl 30 127 0.001 1 0 1 fftgridRGB_G fftgridRGB_G fftgridRGB_G
+0 -23 0 10 -262144 -1 -1 4200 1;
+#X obj 496 143 vsl 30 127 0.001 1 0 1 fftgridRGB_B fftgridRGB_B fftgridRGB_B
+0 -37 0 10 -262144 -1 -1 5000 1;
 #X floatatom 428 278 5 0 0 0 - - -;
 #X floatatom 461 277 5 0 0 0 - - -;
 #X floatatom 496 277 5 0 0 0 - - -;
-#X obj 316 143 vsl 30 127 0.001 1 0 0 buildingsRGB_R buildingsRGB_R
-buildingsRGB_R 0 -9 0 10 -262144 -1 -1 11800 1;
-#X obj 349 143 vsl 30 127 0.001 1 0 0 buildingsRGB_G buildingsRGB_G
-buildingsRGB_G 0 -23 0 10 -262144 -1 -1 5600 1;
-#X obj 384 143 vsl 30 127 0.001 1 0 0 buildingsRGB_B buildingsRGB_B
-buildingsRGB_B 0 -37 0 10 -262144 -1 -1 577 1;
+#X obj 316 143 vsl 30 127 0.001 1 0 1 buildingsRGB_R buildingsRGB_R
+buildingsRGB_R 0 -9 0 10 -262144 -1 -1 10118 1;
+#X obj 349 143 vsl 30 127 0.001 1 0 1 buildingsRGB_G buildingsRGB_G
+buildingsRGB_G 0 -23 0 10 -262144 -1 -1 8000 1;
+#X obj 384 143 vsl 30 127 0.001 1 0 1 buildingsRGB_B buildingsRGB_B
+buildingsRGB_B 0 -37 0 10 -262144 -1 -1 1500 1;
 #X floatatom 316 278 5 0 0 0 - - -;
 #X floatatom 350 278 5 0 0 0 - - -;
 #X floatatom 384 277 5 0 0 0 - - -;
 #X obj 315 341 vsl 30 64 0.1 1024 0 1 buildings_minHeight buildings_minHeight
-buildings_minHeight 0 -9 0 10 -262144 -1 -1 800 1;
+buildings_minHeight 0 -9 0 10 -262144 -1 -1 1 1;
 #X floatatom 315 419 5 0 0 0 - - -;
-#X obj 79 275 vsl 30 127 0 8192 0 0 logspectrum_lowCutoff logspectrum_lowCutoff
-logspectrum_lowCutoff 0 -38 0 10 -262144 -1 -1 45 1;
+#X obj 79 275 vsl 30 127 0 8192 0 1 logspectrum_lowCutoff logspectrum_lowCutoff
+logspectrum_lowCutoff 0 -38 0 10 -262144 -1 -1 53 1;
 #X floatatom 79 411 5 0 0 0 - - -;
-#X obj 278 56 tgl 15 0 LTevenPolygons LTevenPolygons LTevenPolygons
+#X obj 278 56 tgl 15 1 LTevenPolygons LTevenPolygons LTevenPolygons
 17 7 0 10 -262144 -1 -1 1 1;
-#X obj 278 15 tgl 35 0 LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE
+#X obj 278 15 tgl 35 1 LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE LT_LASER_TAG_TOGGLE
 37 7 0 10 -262144 -1 -1 0 1;
 #X obj 354 341 vsl 30 64 0.0001 5 0 1 LT_minimumSPECvar LT_minimumSPECvar
 LT_minimumSPECvar 0 -23 0 10 -262144 -1 -1 0 1;
 #X floatatom 354 419 5 0 0 0 - - -;
 #X floatatom 206 458 5 0 0 0 - gridsize_mul -;
 #X obj 394 342 vsl 30 64 0.0001 5 0 1 LT_activeStrokeMIN_SPECvar LT_activeStrokeMIN_SPECvar
-LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
+LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 22 1;
 #X floatatom 394 419 5 0 0 0 - - -;
 #X floatatom 172 197 5 0 0 0 - - -;
-#X obj 317 471 tgl 15 0 BuildingsToggle BuildingsToggle BuildingsToggle
-17 7 0 10 -262144 -1 -1 0 1;
+#X obj 317 471 tgl 15 1 BuildingsToggle BuildingsToggle BuildingsToggle
+17 7 0 10 -262144 -1 -1 1 1;
 #X text -25 24 scriptythekid 2008/2009;
 #X obj 172 411 i;
 #X obj 240 413 i;
 #X floatatom 171 434 5 0 0 0 - - -;
 #X floatatom 239 434 5 0 0 0 - - -;
 #X obj -17 57 tgl 35 0 oscConnect oscConnect oscConnect 0 -7 0 10 -262144
--1 -1 0 1;
+-1 -1 1 1;
 #X obj 65 57 bng 35 250 50 0 flushValuesToASDF flushValuesToASDF flushValuesToASDF
 0 -7 0 10 -262144 -1 -1;
 #X obj 581 114 r beats;
@@ -98,8 +98,13 @@ LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
 #X obj 581 202 spigot;
 #X obj 614 182 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 0
 1;
-#X msg -14 106 localhost 2345;
-#X obj -14 128 s asdfhostport;
+#X obj -14 137 s asdfhostport;
+#X msg -14 111 127.0.0.1 2345;
+#X obj 457 18 tgl 15 1 LT_animate_act_stroke LT_animate_act_stroke
+LT_animate_active_stroke 17 7 0 10 -262144 -1 -1 1 1;
+#X text 103 57 BUGGY!!;
+#X obj 445 51 tgl 15 0 lt_playback lt_playback playback 17 7 0 10 -262144
+-1 -1 1 1;
 #X connect 1 0 2 0;
 #X connect 6 0 7 0;
 #X connect 7 0 48 0;
@@ -120,12 +125,11 @@ LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
 #X connect 33 0 36 0;
 #X connect 37 0 38 0;
 #X connect 39 0 40 0;
-#X connect 42 0 41 0;
 #X connect 43 0 44 0;
 #X connect 46 0 47 0;
 #X connect 51 0 53 0;
 #X connect 52 0 54 0;
-#X connect 55 0 65 0;
+#X connect 55 0 66 0;
 #X connect 57 0 61 0;
 #X connect 58 0 59 0;
 #X connect 59 0 63 0;
@@ -134,4 +138,4 @@ LT_activeStrokeMIN_SPECvar 0 -38 0 10 -262144 -1 -1 0 1;
 #X connect 62 0 61 1;
 #X connect 63 0 60 0;
 #X connect 64 0 63 1;
-#X connect 65 0 66 0;
+#X connect 66 0 65 0;

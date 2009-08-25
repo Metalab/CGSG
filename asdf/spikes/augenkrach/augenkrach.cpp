@@ -156,6 +156,12 @@ class MySDLVU : public SDLVU, public asdfEventHandler
   ViennaMap map;
   PolygonList *polygons;
   BuildingList *buildings;
+  
+  PolygonList *asdf_polygons;
+  BuildingList *asdf_buildings;
+  
+  PolygonList *laser_polygons;
+  BuildingList *laser_buildings;
   public:
     MySDLVU();
     int MyMainLoop();
@@ -208,6 +214,20 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     GLfloat *fftgridVertexArray;
     GLfloat *fftgridColorArray;
     
+    std::vector<float> asdf_VA;
+    std::vector<float> asdf_colorVA;
+    std::vector<float> asdf_roofsVA;
+    std::vector<float> asdf_roofsColorVA;
+    std::vector<float> asdf_NA;
+    std::vector<float> asdf_roofsNA;
+    
+    std::vector<float> laser_VA;
+    std::vector<float> laser_colorVA;
+    std::vector<float> laser_roofsVA;
+    std::vector<float> laser_roofsColorVA;
+    std::vector<float> laser_NA;
+    std::vector<float> laser_roofsNA;
+    
     int imgnum;
     
     int raster_x;
@@ -241,7 +261,8 @@ class MySDLVU : public SDLVU, public asdfEventHandler
     float GetSpecValByBuilding(Building &building, float height);
     float GetUnmangledSpecValByBuilding(Building &building);
 		GLfloat maxX, maxY, minX, minY;
-
+    float asdf_maxx, asdf_minx, asdf_maxy, asdf_miny;
+    
 		void generateRoofVertices();
     void generateRoofVerticesForBuilding(Building *building);
 		void TessellateBuilding(Building &building);
@@ -301,17 +322,22 @@ class MySDLVU : public SDLVU, public asdfEventHandler
   void osc_ltbattle_recvCoords(osc::ReceivedMessage& oscmsg);
   void osc_ltbattle_cmd(osc::ReceivedMessage& oscmsg);
   void setupLTbattlemode();
+  void ltbattle_cmd_clear();
+  void ltbattle_cmd_move();
   
   int lt_animate_until_varray_index;
   int lt_animate_until_roofsvarray_index;
   std::vector<int> strokebeginindices;
   
+  bool animate_act_stroke_toggle;
+  
   float osc_minimum_specvar;
   void osc_set_osc_minimum_specvar(osc::ReceivedMessage& oscmsg);
   float osc_actstroke_specvar;
   void osc_set_osc_actstroke_specvar(osc::ReceivedMessage& oscmsg);
+  void osc_set_animate_act_stroke_toggle(osc::ReceivedMessage& oscmsg);
   
-  std::vector<Building> lt_playback_shape;
+  
   
   std::vector<int> lt_int_shape; // stores only 4 points that come in via osc.
   
@@ -324,8 +350,21 @@ class MySDLVU : public SDLVU, public asdfEventHandler
   } t_lt_shape;
   std::vector<t_lt_shape> lt_shapes; // collection of all captured shapes/tags
   
-  std::vector<int> act_lt_shape;
-  std::vector<Uint32> act_lt_shape_timestamps;
+  std::vector<int> *act_lt_shape;
+  std::vector<Uint32> *act_lt_shape_timestamps;
+  
+  bool lt_playback_mode;
+  int lt_act_shape;
+  uint lt_shape_playback_ticks;
+  uint lt_shape_playback_started_ticks;
+  int lt_index_in_act_shape;
+  int lt_index_in_act_shape_tstamps;
+  
+  std::vector<int> *act_lt_playback_shape;
+  std::vector<Uint32> *act_lt_playback_shape_timestamps;
+  
+  void lt_playback();
+  void osc_toggle_lt_playback(osc::ReceivedMessage& oscmsg);
   
   //flag if lt_battle sent "move" command new stroke begins
   bool lt_newstroke_starting;
@@ -437,7 +476,7 @@ MySDLVU::MySDLVU():map(imageDIR) {
   drawBuildingsToggle = true;
   drawRoofToggle = true;
   fullscreenToggle = false;
-  drawGridToggle = false;
+  drawGridToggle = true;
   drawSpec2GridLinesToggle = false;
   
   colorShiftToggle = false;
@@ -456,15 +495,23 @@ MySDLVU::MySDLVU():map(imageDIR) {
   lt_brush_offset_y = DEF_LT_BRUSH_OFFSET_Y;
   lt_brush_size = DEF_LT_BRUSH_SIZE;
   geometry_resources_freed = false;
-  lasertagbattlemode = true;
-  lt_even_polygons = true;
+  
+  
   
   this->spec2raster = new int[raster_x * raster_y];
   
   //int images_rx = 6;
   //int images_ry = 10;
-  buildings = new BuildingList();
-  polygons = new PolygonList();
+  lasertagbattlemode = true;
+  lt_even_polygons = true;
+  
+  asdf_buildings = new BuildingList();
+  asdf_polygons = new PolygonList();
+  laser_buildings = new BuildingList();
+  laser_polygons = new PolygonList();
+  //let the pointers point - to laser_buildins if lasertagbattlemode == true - to asdf_buildings if == false...
+  buildings = laser_buildings;
+  polygons = laser_polygons;
   buildings->clear();
   
   //alloc them so we can delete[] them on demand
@@ -486,29 +533,40 @@ MySDLVU::MySDLVU():map(imageDIR) {
   fftgridColorArray = new GLfloat[1];
   this->GenerateFFTGridVertexArray(raster_x, raster_y);
   normalizeaudiospectrum = false;
-  adjustSpectrum_freqVSamp = false;
+  adjustSpectrum_freqVSamp = true;
   convertSpectrum2Decibel = false;
-  convertSpectrum2logScale = false;
-  normalizeaudiospectrumWithFixedValue = false;
-  fixednormalizeMaxValue = 1.0;
-  logSpectrumBandwidth = 0;
-  logSpectrumLowCutOff = 0;
+  convertSpectrum2logScale = true;
+  normalizeaudiospectrumWithFixedValue = true;
+  fixednormalizeMaxValue = 0.065;
+  logSpectrumBandwidth = 8192;
+  logSpectrumLowCutOff = 16.0;
   
-  fftgrid_color_multiply_R = 1.0;
-  fftgrid_color_multiply_G = 1.0;
-  fftgrid_color_multiply_B = 1.0;
-  fftgrid_vert_multiply = 1.0;
+  fftgrid_color_multiply_R = 0.238;
+  fftgrid_color_multiply_G = 0.334;
+  fftgrid_color_multiply_B = 0.397;
+  fftgrid_vert_multiply = 3392.0;
   
-  building_color_multiply_R = 1.0;
-  building_color_multiply_G = 1.0;
-  building_color_multiply_B = 1.0;
-  building_vert_multiply = 1.0;
-  building_min_height = 50.0;
+  building_color_multiply_R = 0.922;
+  building_color_multiply_G = 0.460;
+  building_color_multiply_B = 0.048;
+  building_vert_multiply = 6201.0;
+  building_min_height = 1.0;
   
+  animate_act_stroke_toggle = false;
   lt_animate_until_varray_index = 0;
   lt_animate_until_roofsvarray_index = 0;
   osc_minimum_specvar = 0.0;
-  osc_actstroke_specvar = 0.0;
+  osc_actstroke_specvar = 0.045;
+  
+  act_lt_shape = new std::vector<int>;
+  act_lt_shape_timestamps = new std::vector<Uint32>;
+  
+  lt_playback_mode = false;
+  lt_act_shape = 0;
+  lt_shape_playback_ticks = 0;
+  lt_shape_playback_started_ticks = 0;
+  lt_index_in_act_shape = 0;
+  lt_index_in_act_shape_tstamps = 0;
 }
 
 
@@ -541,13 +599,23 @@ void MySDLVU::loadNextImage(int next) {
   
   ImageFileList *filelist = &map.PNGfileList;
   
-  
-  if(currentImage < filelist->size()-1 && next > 0)
+  if(next > 0) {
     currentImage++;
-  else if(currentImage > 0 && next < 0)
+    if(currentImage > filelist->size()-1) {
+      currentImage = 0;
+    }
+  } else if(next < 0) {
     currentImage--;
-  else
+    if(currentImage < 0) {
+      currentImage = filelist->size()-1;
+    }
+  } else {
+    //next == 0  reloads current image
+  }
+  
+  if(currentImage < 0 || currentImage > filelist->size()-1) {
     currentImage = 0;
+  }
   
   cout << "FILELIST SIZE, CIMG: " << filelist->size() << " " << currentImage << endl;
   
@@ -1508,7 +1576,7 @@ void MySDLVU::Display()
 	for (;build != buildend; build++) {
       
       //check for not animating the stroke currently being drawn
-      if(lasertagbattlemode && p >= lt_animate_until_varray_index){
+      if(lasertagbattlemode && !animate_act_stroke_toggle  && p >= lt_animate_until_varray_index){
         s = osc_actstroke_specvar;
         lastSpecVar = osc_actstroke_specvar;
         //s = osc_minimum_specvar;
@@ -1526,7 +1594,7 @@ void MySDLVU::Display()
       //lt_animate_until_roofsvarray_index = roofsVertexArray.size()-1;
       
       //dont do median of building's specVar in different strokes (beginning/end of strokes):
-      if(lasertagbattlemode && strokebeginindices.size() > 0) {
+      if(lasertagbattlemode && lt_even_polygons && strokebeginindices.size() > 0) {
         for(int k=0;k<strokebeginindices.size()-1;k++) {
           if(p == strokebeginindices.at(k)+1) {
             lastSpecVar = s;
@@ -1534,11 +1602,15 @@ void MySDLVU::Display()
         }
       }
       
+      if(!lt_even_polygons) {
+        lastSpecVar = s;
+      }
+      
       RcolorSpec = s * building_color_multiply_R;
       GcolorSpec = s * building_color_multiply_G;
       BcolorSpec = s * building_color_multiply_B;
       vertSpec = s * building_vert_multiply;
-    
+      
       act_RcolorSpec = s * building_color_multiply_R;
       act_GcolorSpec = s * building_color_multiply_G;
       act_BcolorSpec = s * building_color_multiply_B;
@@ -1548,6 +1620,7 @@ void MySDLVU::Display()
       last_GcolorSpec = lastSpecVar * building_color_multiply_G;
       last_BcolorSpec = lastSpecVar * building_color_multiply_B;
       last_vertSpec = lastSpecVar * building_vert_multiply;
+      
       
         
       if(drawBuildingsToggle) {
@@ -1691,7 +1764,7 @@ void MySDLVU::Display()
       glVertexPointer(3, GL_FLOAT, 0, myRoofsVertexArray);
       glColorPointer(3, GL_FLOAT, 0, myRoofsColorVertexArray);
       glNormalPointer(GL_FLOAT, 0, myRoofsNormalsArray);
-      if(lasertagbattlemode && lt_even_polygons) {
+      if(lasertagbattlemode) {
         glDrawArrays(GL_QUADS, 0, roofsVertexArray.size()/3);
       } else {
         glDrawArrays(GL_TRIANGLES, 0, roofsVertexArray.size()/3);
@@ -1806,6 +1879,129 @@ void MySDLVU::Motion(const SDL_MouseMotionEvent & event)
         break;
     };
   }
+}
+
+
+/*lt_playback_mode = false;
+lt_act_shape = 0;
+lt_shape_playback_ticks = 0;
+lt_shape_playback_started_ticks
+lt_index_in_act_shape
+lt_index_in_act_shape_tstamps
+
+  std::vector<int> *act_lt_playback_shape;
+  std::vector<Uint32> *act_lt_playback_shape_timestamps;
+  
+typedef struct {
+  //fixme 
+  //i push maxint into the array for a move command
+  std::vector<int> *lt_shape_P;
+  std::vector<Uint32> *lt_shape_timestamps_P;
+} t_lt_shape;
+std::vector<t_lt_shape> lt_shapes; // collection of all captured shapes/tags
+
+std::vector<int> *act_lt_shape;
+std::vector<Uint32> *act_lt_shape_timestamps;
+*/
+void MySDLVU::lt_playback() {
+  if(lt_shapes.size() < 1 || lt_act_shape > lt_shapes.size()-1) {
+    return;
+  }
+  
+  //check to change lt_act_shape to next / =0;
+  
+  act_lt_playback_shape = lt_shapes.at(lt_act_shape).lt_shape_P;
+  act_lt_playback_shape_timestamps = lt_shapes.at(lt_act_shape).lt_shape_timestamps_P;
+  if(act_lt_playback_shape->size() < 4) {
+    //shape with only 1 point... not much to playback...
+    
+    cout << "discarding shape " << (lt_act_shape)  << " size:" << act_lt_playback_shape->size() << endl;
+    
+    if(lt_act_shape < (lt_shapes.size()) ) {
+      lt_act_shape++;
+    } else {
+      lt_act_shape=0;
+    }
+    lt_index_in_act_shape = 0;
+    lt_index_in_act_shape_tstamps = 0;
+    
+    cout << "will playback shape: " << lt_act_shape << endl;
+    ltbattle_cmd_clear();
+    return;
+  }
+  
+  
+  uint delta = 0;
+  if(lt_index_in_act_shape_tstamps < (act_lt_playback_shape_timestamps->size()-1)) {
+    delta = act_lt_playback_shape_timestamps->at(lt_index_in_act_shape_tstamps+1) - act_lt_playback_shape_timestamps->at(lt_index_in_act_shape_tstamps);
+  } else {
+    delta = 5000; //fixme
+  }
+  
+  
+  if((SDL_GetTicks() - lt_shape_playback_started_ticks) > delta) {
+    
+    try {
+      //push the coords
+      if(act_lt_playback_shape->at(lt_index_in_act_shape) == INT_MAX) {
+        cout << "move cmd via INT_MAX" << endl;
+        ltbattle_cmd_move();
+      } else {
+        //cout << "playback coords: " << act_lt_playback_shape->at(lt_index_in_act_shape);
+        //cout << " / " << act_lt_playback_shape->at(lt_index_in_act_shape+1) << endl;
+        lt_int_shape.push_back(act_lt_playback_shape->at(lt_index_in_act_shape));
+        lt_int_shape.push_back(act_lt_playback_shape->at(lt_index_in_act_shape+1));
+        process_lt_coords();
+      }
+    } catch( Exception& e) {
+      cout << "playback Exception pushing coords: " << e.what() << endl;
+    }
+    
+    
+    lt_index_in_act_shape_tstamps++;
+    lt_index_in_act_shape +=2;
+    if(lt_index_in_act_shape > (act_lt_playback_shape->size()-2) ) {
+      lt_index_in_act_shape = 0;
+      lt_index_in_act_shape_tstamps = 0;
+      lt_act_shape++;
+      if(lt_act_shape > (lt_shapes.size()-1) ) {
+        lt_act_shape = 0;
+      }
+      cout << "will playback shape: " << lt_act_shape << endl;
+      ltbattle_cmd_clear();
+    }
+    lt_shape_playback_started_ticks += delta;
+  }
+  
+}
+
+
+void MySDLVU::osc_toggle_lt_playback(osc::ReceivedMessage& oscmsg) {
+  osc::int32 playtoggle = 0;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> playtoggle >> osc::EndMessage;
+    if(playtoggle == 0) {
+      lt_playback_mode = false;
+      lt_shape_playback_started_ticks = 0;
+      //fixme 
+      //playback function should take care of resetting indices , etc... 
+      lt_act_shape=0;
+      lt_index_in_act_shape = 0;
+      lt_index_in_act_shape_tstamps = 0;
+    } else {
+      if(lt_shapes.size() > 0) {
+        lt_playback_mode = true;
+        lt_shape_playback_started_ticks = SDL_GetTicks();
+      } else {
+        lt_shape_playback_started_ticks = 0;
+        cout << "need at least 1 shape for playback mode..." << endl;
+      }
+    }
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+  }
+  cout << "lt_playback_mode: " << lt_playback_mode << endl;
 }
 
 void MySDLVU::osc_set_evenpolygons(osc::ReceivedMessage& oscmsg) {
@@ -2187,7 +2383,18 @@ void MySDLVU::osc_SelectCamera(osc::ReceivedMessage& oscmsg) {
   SelectCamera(osccamno);
 }
 
-
+void MySDLVU::osc_set_animate_act_stroke_toggle(osc::ReceivedMessage& oscmsg) {
+  osc::int32 animtog;
+  try {
+    osc::ReceivedMessageArgumentStream args = oscmsg.ArgumentStream();
+    args >> animtog >> osc::EndMessage;
+    animate_act_stroke_toggle = animtog == 0?false:true;
+  } catch( Exception& e ) {
+    cout << "exception: " << e.what() << endl;
+    animate_act_stroke_toggle = !animate_act_stroke_toggle;
+  }
+  cout << "animate_act_stroke_toggle: " << animate_act_stroke_toggle << endl;
+}
 
 void MySDLVU::osc_set_osc_actstroke_specvar(osc::ReceivedMessage& oscmsg) {
   float n_min;
@@ -2279,17 +2486,205 @@ void MySDLVU::setupLTbattlemode() {
 }
 
 void MySDLVU::set_ltbattlemode(bool toggle) {
+  
+  if(lasertagbattlemode == toggle) {
+    //dont do unneeded work
+    return;
+  }
+  
   ltbattlemodetoggle = toggle;
   if(ltbattlemodetoggle == true) {
-    
-    //freePolygonList(*polygons);
-    //freeBuildingList(*buildings);
     //setupLTbattlemode();
-    lasertagbattlemode = true;
+    lasertagbattlemode = true;  //yay confusing variablenames all over the place... :(
+    
+    //swap building/polygon lists...
+    buildings = laser_buildings;
+    polygons = laser_polygons;
+    //save vertex array vectors and copy the right one into the real vertex arrays...
+    asdf_VA.clear();
+    asdf_colorVA.clear();
+    asdf_roofsVA.clear();
+    asdf_roofsColorVA.clear();
+    asdf_NA.clear();
+    asdf_roofsNA.clear();
+    
+    asdf_VA.resize(vertexArray.size());
+    asdf_colorVA.resize(colorVertexArray.size());
+    asdf_roofsVA.resize(roofsVertexArray.size());
+    asdf_roofsColorVA.resize(roofsColorVertexArray.size());
+    asdf_NA.resize(normalsArray.size());
+    asdf_roofsNA.resize(roofsNormalsArray.size());
+    
+    std::vector<float>::iterator VAi = asdf_VA.begin();
+    std::vector<float>::iterator cVAi = asdf_colorVA.begin();
+    std::vector<float>::iterator rVAi = asdf_roofsVA.begin();
+    std::vector<float>::iterator rcVAi = asdf_roofsColorVA.begin();
+    std::vector<float>::iterator NAi = asdf_NA.begin();
+    std::vector<float>::iterator rNAi = asdf_roofsNA.begin();
+    copy(vertexArray.begin(), vertexArray.end(), VAi);
+    copy(colorVertexArray.begin(), colorVertexArray.end(), cVAi);
+    copy(roofsVertexArray.begin(), roofsVertexArray.end(), rVAi);
+    copy(roofsColorVertexArray.begin(), roofsColorVertexArray.end(), rcVAi);
+    copy(normalsArray.begin(), normalsArray.end(), NAi);
+    copy(roofsNormalsArray.begin(), roofsNormalsArray.end(), rNAi);
+    
+    vertexArray.clear();
+    colorVertexArray.clear();
+    roofsVertexArray.clear();
+    roofsColorVertexArray.clear();
+    normalsArray.clear();
+    roofsNormalsArray.clear();
+    
+    vertexArray.resize(laser_VA.size());
+    colorVertexArray.resize(laser_colorVA.size());
+    roofsVertexArray.resize(laser_roofsVA.size());
+    roofsColorVertexArray.resize(laser_roofsColorVA.size());
+    normalsArray.resize(laser_NA.size());
+    roofsNormalsArray.resize(laser_roofsNA.size());
+    
+    VAi = vertexArray.begin();
+    cVAi = colorVertexArray.begin();
+    rVAi = roofsVertexArray.begin();
+    rcVAi = roofsColorVertexArray.begin();
+    NAi = normalsArray.begin();
+    rNAi = roofsNormalsArray.begin();
+    copy(laser_VA.begin(), laser_VA.end(), VAi);
+    copy(laser_colorVA.begin(), laser_colorVA.end(), cVAi);
+    copy(laser_roofsVA.begin(), laser_roofsVA.end(), rVAi);
+    copy(laser_roofsColorVA.begin(), laser_roofsColorVA.end(), rcVAi);
+    copy(laser_NA.begin(), laser_NA.end(), NAi);
+    copy(laser_roofsNA.begin(), laser_roofsNA.end(), rNAi);
+    delete[] myVertexArray;
+    delete[] myVertexColorArray;
+    delete[] myRoofsVertexArray;
+    delete[] myRoofsColorVertexArray;
+    delete[] myNormalsArray;
+    delete[] myRoofsNormalsArray;
+    myVertexArray = new GLfloat[vertexArray.size()];
+    myVertexColorArray = new GLfloat[colorVertexArray.size()];
+    myRoofsVertexArray = new GLfloat[roofsVertexArray.size()];
+    myRoofsColorVertexArray = new GLfloat[roofsColorVertexArray.size()];
+    myNormalsArray = new GLfloat[normalsArray.size()];
+    myRoofsNormalsArray = new GLfloat[roofsNormalsArray.size()];
+    copy(vertexArray.begin(), vertexArray.end(), myVertexArray);
+    copy(colorVertexArray.begin(), colorVertexArray.end(), myVertexColorArray);
+    copy(roofsVertexArray.begin(), roofsVertexArray.end(), myRoofsVertexArray);
+    copy(roofsColorVertexArray.begin(), roofsColorVertexArray.end(), myRoofsColorVertexArray);
+    copy(normalsArray.begin(), normalsArray.end(), myNormalsArray);
+    copy(roofsNormalsArray.begin(), roofsNormalsArray.end(), myRoofsNormalsArray);
+    
+    asdf_maxx = maxX;
+    asdf_minx = minX;
+    asdf_maxy = maxY;
+    asdf_miny = minY;
+    maxX=3200;
+    minX=0;
+    maxY=2400;
+    minY=0;
+    
   } else {
     lasertagbattlemode = false;
     
+    //swap building/polygon lists...
+    buildings = asdf_buildings;
+    polygons = asdf_polygons;
+    //save vertex array vectors and copy the right one into the real vertex arrays...
+    laser_VA.clear();
+    laser_colorVA.clear();
+    laser_roofsVA.clear();
+    laser_roofsColorVA.clear();
+    laser_NA.clear();
+    laser_roofsNA.clear();
+    
+    laser_VA.resize(vertexArray.size());
+    laser_colorVA.resize(colorVertexArray.size());
+    laser_roofsVA.resize(roofsVertexArray.size());
+    laser_roofsColorVA.resize(roofsColorVertexArray.size());
+    laser_NA.resize(normalsArray.size());
+    laser_roofsNA.resize(roofsNormalsArray.size());
+    
+    std::vector<float>::iterator VAi = laser_VA.begin();
+    std::vector<float>::iterator cVAi = laser_colorVA.begin();
+    std::vector<float>::iterator rVAi = laser_roofsVA.begin();
+    std::vector<float>::iterator rcVAi = laser_roofsColorVA.begin();
+    std::vector<float>::iterator NAi = laser_NA.begin();
+    std::vector<float>::iterator rNAi = laser_roofsNA.begin();
+    copy(vertexArray.begin(), vertexArray.end(), VAi);
+    copy(colorVertexArray.begin(), colorVertexArray.end(), cVAi);
+    copy(roofsVertexArray.begin(), roofsVertexArray.end(), rVAi);
+    copy(roofsColorVertexArray.begin(), roofsColorVertexArray.end(), rcVAi);
+    copy(normalsArray.begin(), normalsArray.end(), NAi);
+    copy(roofsNormalsArray.begin(), roofsNormalsArray.end(), rNAi);
+    
+    vertexArray.clear();
+    colorVertexArray.clear();
+    roofsVertexArray.clear();
+    roofsColorVertexArray.clear();
+    normalsArray.clear();
+    roofsNormalsArray.clear();
+    
+    vertexArray.resize(asdf_VA.size());
+    colorVertexArray.resize(asdf_colorVA.size());
+    roofsVertexArray.resize(asdf_roofsVA.size());
+    roofsColorVertexArray.resize(asdf_roofsColorVA.size());
+    normalsArray.resize(asdf_NA.size());
+    roofsNormalsArray.resize(asdf_roofsNA.size());
+    
+    VAi = vertexArray.begin();
+    cVAi = colorVertexArray.begin();
+    rVAi = roofsVertexArray.begin();
+    rcVAi = roofsColorVertexArray.begin();
+    NAi = normalsArray.begin();
+    rNAi = roofsNormalsArray.begin();
+    copy(asdf_VA.begin(), asdf_VA.end(), VAi);
+    copy(asdf_colorVA.begin(), asdf_colorVA.end(), cVAi);
+    copy(asdf_roofsVA.begin(), asdf_roofsVA.end(), rVAi);
+    copy(asdf_roofsColorVA.begin(), asdf_roofsColorVA.end(), rcVAi);
+    copy(asdf_NA.begin(), asdf_NA.end(), NAi);
+    copy(asdf_roofsNA.begin(), asdf_roofsNA.end(), rNAi);
+    delete[] myVertexArray;
+    delete[] myVertexColorArray;
+    delete[] myRoofsVertexArray;
+    delete[] myRoofsColorVertexArray;
+    delete[] myNormalsArray;
+    delete[] myRoofsNormalsArray;
+    myVertexArray = new GLfloat[vertexArray.size()];
+    myVertexColorArray = new GLfloat[colorVertexArray.size()];
+    myRoofsVertexArray = new GLfloat[roofsVertexArray.size()];
+    myRoofsColorVertexArray = new GLfloat[roofsColorVertexArray.size()];
+    myNormalsArray = new GLfloat[normalsArray.size()];
+    myRoofsNormalsArray = new GLfloat[roofsNormalsArray.size()];
+    copy(vertexArray.begin(), vertexArray.end(), myVertexArray);
+    copy(colorVertexArray.begin(), colorVertexArray.end(), myVertexColorArray);
+    copy(roofsVertexArray.begin(), roofsVertexArray.end(), myRoofsVertexArray);
+    copy(roofsColorVertexArray.begin(), roofsColorVertexArray.end(), myRoofsColorVertexArray);
+    copy(normalsArray.begin(), normalsArray.end(), myNormalsArray);
+    copy(roofsNormalsArray.begin(), roofsNormalsArray.end(), myRoofsNormalsArray);
+    
+    maxX=asdf_maxx;
+    minX=asdf_minx;
+    maxY=asdf_maxy;
+    minY=asdf_miny;
+    printf("minX: %f\n",minX);
+  	printf("maxX: %f\n",maxX);
+  	printf("minY: %f\n",minY);
+  	printf("maxY: %f\n",maxY);
+  	cout << "vertArray size: " << vertexArray.size() << endl;
+  	//fixme 
+  	//vertex array seems fucked up if i dont completly reload the image as in the code below.
+  	// no idea why... (min/max X/Y  vars seem to be fucked up after turning ltbattlemode on and off)
+  	//thats why i tried workaround with saved asdf_maxx,asdf_minx, etc... didnt work.
+    //lasertag vertexarrays are no problem to recreate... :(
+    //
+    //ugly hack but seems to work
+    //reload current image
+    loadNextImage(0);
   }
+  
+  
+	
+  update_spectrum_raster_mappings();
+  //genPoly2RasterFactors(raster_x, raster_y, raster_poly_search_distance);
   cout << "LaserTagBattle on/off: " << ltbattlemodetoggle << endl;
 }
 
@@ -2357,9 +2752,9 @@ void MySDLVU::osc_ltbattle_recvCoords(osc::ReceivedMessage& oscmsg) {
       lt_int_shape.push_back(new_p_x);
       lt_int_shape.push_back(new_p_y);
 
-      act_lt_shape.push_back(wpx);
-      act_lt_shape.push_back(wpy);
-      act_lt_shape_timestamps.push_back(SDL_GetTicks());
+      act_lt_shape->push_back(new_p_x);
+      act_lt_shape->push_back(new_p_y);
+      act_lt_shape_timestamps->push_back(SDL_GetTicks());
     
       ltshape_pointcount++;
     }
@@ -2833,6 +3228,52 @@ void MySDLVU::addBuilding2VertexArray(Building *building) {
   }
 }
 
+
+void MySDLVU::ltbattle_cmd_move() {
+  lt_newstroke_starting = true;
+  lt_int_shape.clear();
+  if(!lt_playback_mode) {
+    act_lt_shape->push_back(INT_MAX);
+    act_lt_shape->push_back(INT_MAX);
+    act_lt_shape_timestamps->push_back(SDL_GetTicks());
+  }
+  lt_animate_until_varray_index = vertexArray.size()-1;
+  lt_animate_until_roofsvarray_index = roofsVertexArray.size()-1;
+  strokebeginindices.push_back(vertexArray.size()-1);
+}
+
+void MySDLVU::ltbattle_cmd_clear() {
+  //fixme 
+  //possible memory leak? because of how t_lt_shape is defined... pointer hell once more for drug infested brainz
+  if(!lt_playback_mode) {
+    t_lt_shape myshape;
+    myshape.lt_shape_P = act_lt_shape;
+    myshape.lt_shape_timestamps_P = act_lt_shape_timestamps;
+    lt_shapes.push_back(myshape);
+    cout << "total shapes/tags: " << lt_shapes.size() << endl;
+  
+    act_lt_shape = new std::vector<int>;
+    act_lt_shape_timestamps = new std::vector<Uint32>;
+  }
+  
+  lt_int_shape.clear();
+  freePolygonList(*polygons);
+  freeBuildingList(*buildings);
+  buildings->clear();
+  
+  vertexArray.clear();
+  colorVertexArray.clear();
+  normalsArray.clear();
+  
+  roofsVertexArray.clear();
+  roofsColorVertexArray.clear();
+  roofsNormalsArray.clear();
+  buildingOffsetsinRoofsArray.clear();
+  
+  lt_animate_until_varray_index = 0;
+  lt_animate_until_roofsvarray_index = 0;
+  strokebeginindices.clear();
+}
 void MySDLVU::osc_ltbattle_cmd(osc::ReceivedMessage& oscmsg) {
   if(!lasertagbattlemode) {
     return;
@@ -2851,41 +3292,9 @@ void MySDLVU::osc_ltbattle_cmd(osc::ReceivedMessage& oscmsg) {
   }
   
   if(oscltcmd.compare("move") == 0) {
-    lt_newstroke_starting = true;
-    lt_int_shape.clear();
-    act_lt_shape.push_back(INT_MAX);
-    act_lt_shape.push_back(INT_MAX);
-    act_lt_shape_timestamps.push_back(SDL_GetTicks());
-    lt_animate_until_varray_index = vertexArray.size()-1;
-    lt_animate_until_roofsvarray_index = roofsVertexArray.size()-1;
-    strokebeginindices.push_back(vertexArray.size()-1);
+    ltbattle_cmd_move();
   } else if(oscltcmd.compare("clear") == 0) {
-    //fixme 
-    //possible memory leak? because of how t_lt_shape is defined... pointer hell once more for drug infested brainz
-    t_lt_shape myshape;
-    myshape.lt_shape_P = &act_lt_shape;
-    myshape.lt_shape_timestamps_P = &act_lt_shape_timestamps;
-    lt_shapes.push_back(myshape);
-    act_lt_shape.clear();
-    act_lt_shape_timestamps.clear();
-    
-    lt_int_shape.clear();
-    freePolygonList(*polygons);
-    freeBuildingList(*buildings);
-    buildings->clear();
-    
-    vertexArray.clear();
-    colorVertexArray.clear();
-    normalsArray.clear();
-    
-    roofsVertexArray.clear();
-    roofsColorVertexArray.clear();
-    roofsNormalsArray.clear();
-    buildingOffsetsinRoofsArray.clear();
-    
-    lt_animate_until_varray_index = 0;
-    lt_animate_until_roofsvarray_index = 0;
-    strokebeginindices.clear();
+    ltbattle_cmd_clear();
   } else {
     //
     cout << "unknown osc lasertag cmd received" <<  oscltcmd << endl;
@@ -2988,6 +3397,10 @@ int MySDLVU::MyMainLoop()
     (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_osc_minimum_specvar);
   registerEvent_memberfunc("/asdf/ltbattle/activestroke/minimumspecvar/set",
     (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_osc_actstroke_specvar);
+  registerEvent_memberfunc("/asdf/ltbattle/activestroke/animate/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_set_animate_act_stroke_toggle);
+  registerEvent_memberfunc("/asdf/ltbattle/playbackmode/set",
+    (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_toggle_lt_playback);
   
   registerEvent_memberfunc("/asdf/audio/logspectrum/size",
     (void(asdfEventHandler::*)(osc::ReceivedMessage&))&MySDLVU::osc_setLogSpectrumSize);
@@ -3040,6 +3453,9 @@ int MySDLVU::MyMainLoop()
     SDL_mutexV(oscMsgQmutex);
     // OSC msg processing
     
+    if(lt_playback_mode) {
+      lt_playback();
+    }
     
     if(updateSpectrum) {
       MySpectrum = stdSpecPtr;

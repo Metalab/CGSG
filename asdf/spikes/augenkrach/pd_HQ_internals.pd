@@ -1,4 +1,4 @@
-#N canvas 31 29 1219 732 10;
+#N canvas 0 22 1219 732 10;
 #X msg 27 64 send /asdf/MuteToggle \$1;
 #X msg 395 148 send /asdf/buildings/draw \$1;
 #X msg 395 193 send /asdf/buildings/roofs/draw \$1;
@@ -79,9 +79,9 @@
 #X msg 714 363 send /asdf/fftgrid/colors/setrgb \$1 \$2 \$3;
 #X obj 318 628 sendOSC;
 #X msg 734 665 connect localhost 2345;
-#X msg 750 516 disconnect;
-#X obj 750 463 r oscConnect;
-#X obj 750 486 select 0 1;
+#X msg 757 555 disconnect;
+#X obj 757 502 r oscConnect;
+#X obj 757 525 select 0 1;
 #X obj 395 18 r polySearchDist;
 #X obj 1035 104 r flushValuesToASDF;
 #X obj 962 576 s normalizeAudio;
@@ -115,11 +115,15 @@
 -1 -1;
 #X obj 1049 124 delay 125;
 #X msg 735 685 connect 10.20.30.204 2345;
-#X obj 648 466 r asdfhostport;
-#X obj 648 489 prepend connect;
-#X obj 648 534 spigot;
-#X obj 681 514 tgl 15 0 empty empty empty 17 7 0 10 -262144 -1 -1 1
-1;
+#X obj 657 503 r asdfhostport;
+#X obj 657 525 prepend connect;
+#X msg 712 417 send /asdf/ltbattle/activestroke/animate/set \$1;
+#X obj 712 395 r LT_animate_act_stroke;
+#X text 658 468 fixme? lame lame disconnect does connect \, then disconnect
+;
+#X obj 1127 140 s LT_animate_act_stroke;
+#X obj 24 620 r lt_playback;
+#X msg 24 642 send /asdf/ltbattle/playbackmode/set \$1;
 #X connect 0 0 71 0;
 #X connect 1 0 71 0;
 #X connect 2 0 71 0;
@@ -202,8 +206,6 @@
 #X connect 73 0 71 0;
 #X connect 74 0 75 0;
 #X connect 75 0 73 0;
-#X connect 75 0 111 0;
-#X connect 75 1 111 0;
 #X connect 76 0 9 0;
 #X connect 77 0 105 0;
 #X connect 77 0 106 0;
@@ -234,9 +236,12 @@
 #X connect 105 0 82 0;
 #X connect 105 0 83 0;
 #X connect 105 0 84 0;
+#X connect 105 0 113 0;
 #X connect 106 0 105 0;
 #X connect 107 0 71 0;
 #X connect 108 0 109 0;
-#X connect 109 0 110 0;
+#X connect 109 0 71 0;
 #X connect 110 0 71 0;
-#X connect 111 0 110 1;
+#X connect 111 0 110 0;
+#X connect 114 0 115 0;
+#X connect 115 0 71 0;

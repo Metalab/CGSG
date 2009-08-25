@@ -1,9 +1,20 @@
 #LIBS = -lcv -lhighgui
 
-#  my (borken) OS X 
-CFLAGS = -O2 -ggdb `sdl-config --cflags` -I/opt/local/include -framework OpenGL -lglut -I../../../sdlvu/viewer/ -I/Developer/FMOD\ Programmers\ API/api/inc -I/Users/scriptythekid/Downloads/portmidi/pm_common/ -Ioscpack/
-LIBS = -L../../../sdlvu/viewer/ -L/opt/local/lib `pkg-config opencv --libs` -lsdlvu `sdl-config --libs` -lSDL_image  -framework CoreAudio -L/Developer/FMOD\ Programmers\ API/api/lib -lfmodex -lSDL_console -Loscpack/ -loscpack.so.1.0.2
+SDLVUDIR=../../../sdlvu/viewer/
 
+#  my (borken) OS X 
+# for egypt callgraph generation use:
+#  -dr in CFLAGS 
+# print callgraph with: ./egypt --include-external ../*.00.expand | /Applications/Graphviz.app/Contents/MacOS/dot -Tps -o callgraph.ps -Gpage=40,40 -Gsize=40,8 -Grankdir=LR -s36
+myCFLAGS = `sdl-config --cflags` -I/opt/local/include -framework OpenGL -lglut -I$(SDLVUDIR) -I/Developer/FMOD\ Programmers\ API/api/inc -Ioscpack/
+
+#performance test build, x86-64bit
+# -mtune=nocona
+#CFLAGS = -O2 -mtune=nocona $(myCFLAGS)
+#std with debugging etc
+CFLAGS = -O2 -dr -ggdb $(myCFLAGS)
+
+LIBS = -L$(SDLVUDIR) -L/opt/local/lib `pkg-config opencv --libs` -lsdlvu `sdl-config --libs` -lSDL_image  -framework CoreAudio -L/Developer/FMOD\ Programmers\ API/api/lib -lfmodex -lSDL_console -Loscpack/ -loscpack.so.1.0.2
 
 %:%.cpp
 	g++ map.cpp $^ $(CFLAGS) $(LIBS) -o $@

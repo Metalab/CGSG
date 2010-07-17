@@ -200,7 +200,7 @@
                     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
                         //TODO:get the exact error
                         logError("error linking program");
-                        return flase;
+                        return false;
                     }
                     
 
@@ -215,7 +215,7 @@
                     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
                     return true;
                 }
-                return false;
+                return true;
             }
 
             function logError(message) {

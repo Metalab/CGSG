@@ -1,6 +1,6 @@
 var gl;
-var vertexShader, fragmentShader, shaderProgram, vertexBuffer, indexBuffer;
-var hasVertexShaderSource = false, hasFragmentShaderSource = false, hasGeometry = false;
+var vertexShader, fragmentShader, shaderProgram;
+var attributes, uniforms;
 var logContainer;
 
 function init() {
@@ -25,9 +25,6 @@ function init() {
         shaderProgram = gl.createProgram();
         gl.attachShader(shaderProgram, vertexShader);
         gl.attachShader(shaderProgram, fragmentShader);
-
-        vertexBuffer = gl.createBuffer();
-        indexBuffer = gl.createBuffer();
 
         // FIXME: Read background color from the DOM?
         gl.clearColor(0.5, 0.0, 0.0, 1.0)
@@ -70,9 +67,12 @@ function init() {
                            '}\n');
 
 
-    geometryTC.selectTemplate(0);
     vertexTC.selectTemplate(0);
     fragmentTC.selectTemplate(0);
+    geometryTC.selectTemplate(0);
+
+    tryRelink();
+    setShaderData();
 
     // Setup render function
     setInterval(render, 200);
@@ -87,21 +87,44 @@ function compileShader(shader, source) {
                  "\n" + source)
         return false;
     }
-    return tryRelink();
+    return true;
 }
 
 function setVertexShader(shaderText) {
     window.console.log("setVertexShader()\n" + shaderText);
-    hasVertexShaderSource = (shaderText != "") 
-    window.console.log("attributes: " + ExtractAttributesFromShaderSource(shaderText));
-    window.console.log("uniforms: " + ExtractUniformsFromShaderSource(shaderText));
+    vertexShader.attributes = ExtractAttributesFromShaderSource(shaderText);
+    logInfo("vertex shader attributes: " + vertexShader.attributes)
+    vertexShader.uniforms = ExtractUniformsFromShaderSource(shaderText);
     return compileShader(vertexShader, shaderText);
 }
 
 function setFragmentShader(shaderText) {
     window.console.log("setFragmentShader()...");
-    hasFragmentShaderSource = (shaderText != "") 
     return compileShader(fragmentShader, shaderText);
+}
+
+function setShaderData()
+{
+    for (var attr in attributes) {
+        attributes[attr].id = gl.getAttribLocation(shaderProgram, attr);
+        // error handling
+        gl.enableVertexAttribArray(attributes[attr].id);
+
+        // Create buffer and upload data
+        attributes[attr].buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, attributes[attr].buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new WebGLFloatArray(attributes[attr]), gl.STATIC_DRAW);
+        // FIXME:
+        attributes[attr].itemsize = 3;
+        attributes[attr].numitems = 3;
+    }
+
+    // Verify that all vertex attributes expected by the shader are specified
+    for (var i=0;i<vertexShader.attributes.length;i++) {
+        if (!(vertexShader.attributes[i] in attributes)) {
+            logInfo("Expected vertex shader attribute missing: " + vertexShader.attributes[i]);
+        }
+    }
 }
 
 /*
@@ -112,19 +135,14 @@ function setFragmentShader(shaderText) {
   indices = flat array of integers referencing vertex arrays
 */
 function setGeometryCode(code) {
-    window.console.log("setGeometryCode()...");
-    // FIXME: This is just dummy code. Should evaluate code instead
+    // FIXME: These objects needs to be cleaned up
+    attributes = {}
+    uniforms = {}
 
-    var vertices = [
+    attributes.vertex = [
         0.0,  1.0,  0.0,
-            -1.0, -1.0,  0.0,
+       -1.0, -1.0,  0.0,
         1.0, -1.0,  0.0 ];
-
-    // Upload data to vertex buffer
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new WebGLFloatArray(vertices), gl.STATIC_DRAW);
-    vertexBuffer.itemsize = 3;
-    vertexBuffer.numitems = 3;
 
     return true;
 }
@@ -156,43 +174,37 @@ function render() {
     loadIdentity();
     mvTranslate([-1.5, 0.0, -7.0]);
 
-    
     // Render FBO
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexBuffer.itemsize, gl.FLOAT, false, 0, 0);
-
+    for (var attr in attributes) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, attributes[attr].buffer);
+        gl.vertexAttribPointer(attributes[attr].id, attributes[attr].itemsize, gl.FLOAT, false, 0, 0);
+    }
     // Camera emulation
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, new WebGLFloatArray(pMatrix.flatten()));
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, new WebGLFloatArray(mvMatrix.flatten()));
 
     //non-indexed:
-    gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numitems);
+    gl.drawArrays(gl.TRIANGLES, 0, attributes[attr].numitems);
     //indexed: gl.drawElements(...)
 }
 
 
 function tryRelink() {
-    if (hasVertexShaderSource && hasFragmentShaderSource) {
-        window.console.log("Linking shaders...");
-        gl.linkProgram(shaderProgram);
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-            //TODO:get the exact error
-            logError("error linking program");
-            return false;
-        }
-        
-
-        //FIXME: don't call this every time...
-        gl.useProgram(shaderProgram);
-
-        // Get reference to our vertex attributes and enable them
-        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "vertex");
-        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-        // Handle uniforms
-        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-        return true;
+    window.console.log("Linking shaders...");
+    gl.linkProgram(shaderProgram);
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        logError("error linking program:\n" +
+                 gl.getProgramInfoLog(shaderProgram));
+        return false;
     }
+    
+    
+    //FIXME: don't call this every time...
+    gl.useProgram(shaderProgram);
+    
+    // Handle uniforms
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     return true;
 }
 

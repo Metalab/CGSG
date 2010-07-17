@@ -225,6 +225,10 @@
                 appendLog("<span class='error'>" + message + "</span><br>");
             }
 
+            function logInfo(message){
+                appendLog(message + "<br>");
+            }
+
             function appendLog(htmlText) {
                 logContainer.innerHTML = logContainer.innerHTML + htmlText;
             }

@@ -21,6 +21,7 @@
         </style>
         <script type="text/javascript" src="sylvester.js"></script>
         <script type="text/javascript" src="glUtils.js"></script>
+        <script type="text/javascript" src="shaderutils.js"></script>
         <script type="text/javascript">
             var gl;
             var vertexShader, fragmentShader, shaderProgram, vertexBuffer, indexBuffer;
@@ -117,6 +118,8 @@
             function setVertexShader(shaderText) {
                 window.console.log("setVertexShader()\n" + shaderText);
                 hasVertexShaderSource = (shaderText != "") 
+                window.console.log("attributes: " + ExtractAttributesFromShaderSource(shaderText));
+                window.console.log("uniforms: " + ExtractUniformsFromShaderSource(shaderText));
                 return compileShader(vertexShader, shaderText);
             }
 

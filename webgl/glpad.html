@@ -17,29 +17,83 @@
             textarea { display:block; width:35em; height:10em; border:1px solid black; }
             .container {  }
         </style>
-        <script src="webglu/src/webglu.js"></script>
-        <script src="webglu/src/Util.js"></script>
         <script type="text/javascript">
-            
+            var gl;
+            var vertexShader, fragmentShader, shaderProgram, vertexBuffer, indexBuffer;
+            var hasVertexShaderSource = false, hasFragmentShaderSource = false, hasGeometry = false;
+
 
             function init() {
-                //init webglu
-                $W.paths.libsrc = "webglu/src/";
-                $W.paths.external = "webglu/external/";
-                $W.paths.shaders = "webglu/shaders/";
-                $W.paths.materials = "webglu/materials/";
-                $W.paths.sylvester = "sylvester.js";
-                if (!$W.initialize("surface")) {
-                    alert('your webgl is lacking');
+                var surface = document.getElementById('surface');
+                try {
+                    gl = surface.getContext('experimental-webgl');
+                    gl.viewportWidth = surface.width;
+                    gl.viewportHeight = surface.height;
+                    vertexShader = gl.createShader(gl.VERTEX_SHADER);
+                    fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+                    shaderProgram = gl.createProgram();
+                    gl.attachShader(shaderProgram, vertexShader);
+                    gl.attachShader(shaderProgram, fragmentShader);
+
+                } catch(e) {
+                    alert('error initializing webgl: ' + e);
+                    return;
                 }
+
+
 
                 //init gui
                 var geometryTC = new TemplateControl('geometryCode', 'applyGeometryCode', 'geometryPreset');
+                geometryTC.onapply = setGeometryCode;
                 geometryTC.addTemplate('cube', '//TODO: make a cube');
-                geometryTC.onchange = function(text) { alert(text); return true; };
+                
+                var vertexTC = new TemplateControl('vertexShader', 'applyVertexShader', 'vertexShaderPreset');
+                vertexTC.onapply = setVertexShader;
+                vertexTC.addTemplate('simple', '//TODO: make a simple vertex shader');
 
-    
+                var fragmentTC = new TemplateControl('fragmentShader', 'applyFragmentShader', 'fragmentShaderPreset');
+                fragmentTC.onapply = setFragmentShader;
+                fragmentTC.addTemplate('uniform color', '//TODO: make a simple fragment shader');
+
+                geometryTC.selectTemplate(0);
+                vertexTC.selectTemplate(0);
+                fragmentTC.selectTemplate(0);
             }
+
+            function setVertexShader(shaderText) {
+                return true; 
+            }
+
+            function setFragmentShader(shaderText) {
+                return true;
+            }
+
+            function setGeometryCode(code) {
+                return true;
+            }
+
+            function tryRelink() {
+                if (hasVertexShaderSource && hasFragmentShaderSource) {
+                    gl.linkProgram(shaderProgram);
+                    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                        //TODO:get the exact error
+                        logError("error linking program");
+                        return;
+                    }
+                    
+
+                    //FIXME: don't call this every time...
+                    gl.useProgram(shaderProgram);
+
+                }
+            }
+
+            function logError(message) {
+                //TODO: properly append text to some logging-div
+                alert(message);
+            }
+
+
 
             function TemplateControl(textAreaId, applyButtonId, selectListId) {
                 var textArea = document.getElementById(textAreaId);
@@ -47,37 +101,50 @@
                 var selectList = document.getElementById(selectListId);
                 var blockUpdate = false;
                 var me = this;
-                var templates = new object();
+                var templates = new Object();
 
                 //add custom entry
                 selectList.innerHTML = "<option value='custom'>custom</option>";
                 selectList.onchange = function() {
                     var selectedName = selectList.options[selectList.selectedIndex].value;
-                    var text = templates[selectedName];
-                    blockUpdate = true;
-                    textArea.value = text;
-                    blockUpdate = false;
-                    applyButton.onclick();
+                    if (selectedName != 'custom') {
+                        var text = templates[selectedName];
+                        blockUpdate = true;
+                        textArea.value = text;
+                        blockUpdate = false;
+                        applyButton.onclick();
+                    }
                 };
 
+                textArea.onkeypress = function() {
+                    textArea.onchange();
+                }
+
                 textArea.onchange = function() {
-                    if (!blockUpdates) {
-                        applyButton.enabled = true;
+                    if (!blockUpdate) {
+                        applyButton.disabled = false;
                         selectList.selectedIndex = selectList.options.length-1;
                     }
                 };
 
                 applyButton.onclick = function() {
-                    if (this.onapply) {
-                        if (this.onapply(textArea.value))
-                            applyButton.enabled = false;
+                    if (me.onapply) {
+                        if (me.onapply(textArea.value))
+                            applyButton.disabled = true;
                     }
                 };
 
                 this.addTemplate = function(name, script) {
                     templates[name] = script;
+                    var oldSelected = selectList.selectedIndex;
                     selectList.innerHTML = "<option value='" + name + "'>" + name +"</option>" + selectList.innerHTML;
+                    selectList.selectedIndex = oldSelected + 1;
                 };
+
+                this.selectTemplate = function(index) {
+                    selectList.selectedIndex = index;
+                    selectList.onchange();
+                }
             }
         </script>
     </head>

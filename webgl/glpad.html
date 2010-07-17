@@ -1,0 +1,119 @@
+<!DOCTYPE html !>
+<html>
+    <head>
+        <title>GLPad</title>
+        <style type="text/css">
+            #surface {
+                width: 800px;
+                height: 480px;
+                border: 2px solid #004488;
+                background: #ffcccc;
+                float:right;
+            }
+            #config {
+            }
+            label { display:block; }
+            label:after { content:':'; }
+            textarea { display:block; width:35em; height:10em; border:1px solid black; }
+            .container {  }
+        </style>
+        <script src="webglu/src/webglu.js"></script>
+        <script type="text/javascript">
+            
+
+            function init() {
+                //init webglu
+                $W.paths.libsrc = "webglu/src/";
+                $W.paths.external = "webglu/external/";
+                $W.paths.shaders = "webglu/shaders/";
+                $W.paths.sylvester = "sylvester.js";
+                if (!$W.initialize("surface")) {
+                    alert('your webgl is lacking');
+                }
+
+                //init gui
+                var geometryTC = new TemplateControl('geometryCode', 'applyGeometryCode', 'geometryPreset');
+                geometryTC.addTemplate('cube', '//TODO: make a cube');
+                geometryTC.onchange = function(text) { alert(text); return true; };
+
+    
+            }
+
+            function TemplateControl(textAreaId, applyButtonId, selectListId) {
+                var textArea = document.getElementById(textAreaId);
+                var applyButton = document.getElementById(applyButtonId);
+                var selectList = document.getElementById(selectListId);
+                var blockUpdate = false;
+                var me = this;
+                var templates = new object();
+
+                //add custom entry
+                selectList.innerHTML = "<option value='custom'>custom</option>";
+                selectList.onchange = function() {
+                    var selectedName = selectList.options[selectList.selectedIndex].value;
+                    var text = templates[selectedName];
+                    blockUpdate = true;
+                    textArea.value = text;
+                    blockUpdate = false;
+                    applyButton.onclick();
+                };
+
+                textArea.onchange = function() {
+                    if (!blockUpdates) {
+                        applyButton.enabled = true;
+                        selectList.selectedIndex = selectList.options.length-1;
+                    }
+                };
+
+                applyButton.onclick = function() {
+                    if (this.onapply) {
+                        if (this.onapply(textArea.value))
+                            applyButton.enabled = false;
+                    }
+                };
+
+                this.addTemplate = function(name, script) {
+                    templates[name] = script;
+                    selectList.innerHTML = "<option value='" + name + "'>" + name +"</option>" + selectList.innerHTML;
+                };
+            }
+        </script>
+    </head>
+    <body onload="init()">
+
+        <canvas id="surface"></canvas>
+        <div id="config">
+            <label for="geometryPreset">geometry</label>
+            <select id="geometryPreset">
+            </select>
+
+            <label for="vertexShader">vertex shader</label>
+            <select id="vertexShaderPreset">
+            </select>
+
+            <label for="fragmentShader">fragment shader</label>
+            <select id="fragmentShaderPreset">
+            </select>
+
+            <br><button id="applyConfig">apply</button>
+
+        </div>
+        <div class="container">
+            <label for="customVertexShader">vertex shader</label>
+            <textarea id="vertexShader"></textarea>
+            <button id="applyVertexShader">apply</button>
+        </div>
+
+        <div class="container">
+            <label for="customFragmentShader">fragment shader</label>
+            <textarea id="fragmentShader"></textarea>
+            <button id="applyFragmentShader">apply</button>
+        </div>
+        <div class="container">
+            <label for="geometryCode">geometry generator</label>
+            <textarea id="geometryCode"></textarea>
+            <button id="applyGeometryCode">apply</button>
+        </div>
+
+    </body>
+</html>

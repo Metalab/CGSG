@@ -16,6 +16,8 @@
             label:after { content:':'; }
             textarea { display:block; width:35em; height:10em; border:1px solid black; }
             .container {  }
+            #log { overflow:scroll; height:8em; border: 1px solid black; }
+            span.error { font-weight:bold; color:red; }
         </style>
         <script type="text/javascript" src="sylvester.js"></script>
         <script type="text/javascript" src="glUtils.js"></script>
@@ -23,9 +25,17 @@
             var gl;
             var vertexShader, fragmentShader, shaderProgram, vertexBuffer, indexBuffer;
             var hasVertexShaderSource = false, hasFragmentShaderSource = false, hasGeometry = false;
-
+            var logContainer;
 
             function init() {
+                //logging
+                logContainer = document.getElementById('log');
+                if (!window.console) window.console = {};
+                if (!window.console.log) window.console.log = function(text) {
+                    appendLog(text + "<br>");
+                };
+
+
                 var surface = document.getElementById('surface');
                 try {
                     gl = surface.getContext('experimental-webgl');
@@ -159,7 +169,7 @@
             }
 
             function render() {
-                window.console.log("render()");
+                //window.console.log("render()");
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
                 // FIXME: This uses some utility functions. Evaluate what we want to
@@ -209,8 +219,11 @@
             }
 
             function logError(message) {
-                //TODO: properly append text to some logging-div
-                alert(message);
+                appendLog("<span class='error'>" + message + "</span><br>");
+            }
+
+            function appendLog(htmlText) {
+                logContainer.innerHTML = logContainer.innerHTML + htmlText;
             }
 
 
@@ -270,7 +283,7 @@
     </head>
     <body onload="init()">
 
-        <canvas id="surface"></canvas>
+        <canvas id="surface" width='800' height='480'></canvas>
         <div class="container">
             <label for="customVertexShader">vertex shader</label>
             <select id="vertexShaderPreset"></select>
@@ -290,6 +303,6 @@
             <textarea id="geometryCode"></textarea>
             <button id="applyGeometryCode">apply</button>
         </div>
-
+        <div id="log"></div>
     </body>
 </html>

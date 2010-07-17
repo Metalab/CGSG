@@ -1,0 +1,53 @@
+<html>
+<head>
+<title>WebGL demo</title>
+
+<script src="WebGLU/src/webglu.js"></script>
+<script>
+function initWebGL() {
+  $W.paths.libsrc = "WebGLU/src/";
+  $W.paths.external = "WebGLU/external/";
+  $W.paths.shaders = "WebGLU/shaders/";
+  $W.paths.materials = "WebGLU/materials/";
+  $W.paths.textures = "WebGLU/textures/";
+  $W.paths.sylvester = "sylvester.js";
+  if (!$W.initialize("WebGL-canvas")) return false;
+  return true;
+}
+</script>
+<script src="querystring.js"></script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+attribute vec3 vertex;
+
+uniform mat4 ProjectionMatrix;
+uniform mat4 ModelViewMatrix;
+
+//varying vec4 out_Color;
+
+void main(void) {
+//    out_Color = vec4(1,1,0,1);
+
+    gl_Position = ProjectionMatrix * ModelViewMatrix * vec4(vertex, 1.0);
+}  
+</script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+//varying vec4 out_Color;
+
+void main(void) {
+//    gl_FragColor = out_Color;
+    gl_FragColor = vec4(1,1,0,1);
+} 
+</script>
+
+<script src="materialtest.js"></script>
+
+</head>
+
+<body onload="if (initWebGL()) webGLMain();">
+  <!-- Set up HTML5 canvas  -->
+  <canvas id="WebGL-canvas" width="500" height="500"></canvas>
+</body>
+
+</html>

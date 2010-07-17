@@ -538,8 +538,9 @@ $W = {
                 throw e; 
             }
 
-
-            if (xhr.status !== 200) {
+            //FIXME: allow status 0 since file loads don't report http status codes
+            //sfa 20100717
+            if (xhr.status !== 200 && xhr.status !== 0) {
                 console.error("\tCompleted with status: " + xhr.status);
                 return "File load error: " + xhr.status;
             }else {

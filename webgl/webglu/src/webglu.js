@@ -496,7 +496,9 @@ $W = {
                 return null; 
             }
 
-            xhr.overrideMimeType("text/xml");
+            // FIXME: Changed from text/xml to text/plan since we're usually 
+            // reading javascript or shaders. kintel 20100716
+            xhr.overrideMimeType("text/plain");
 
             // Deal with firefox security for file:// urls
             try {

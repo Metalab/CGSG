@@ -170,8 +170,8 @@ $W.GLSL.Shader = function(name, src, type) {
     // If the source wasn't passed in we assume name is an element
     // ID in the page
     if (source === undefined) {
-        source = getShaderSourceById(name);
-        this.type = getShaderTypeById(name);
+        source = $W.GLSL.util.getShaderSourceById(name);
+        this.type = $W.GLSL.util.getShaderTypeById(name);
 
     // Else we just use the provided source and type
     }else {
@@ -300,7 +300,7 @@ $W.GLSL.Shader = function(name, src, type) {
         if (this.type === $W.GL.VERTEX_SHADER) {
             $W.debug("compiling '" + this.name + "' as vertex shader");
         }else if (this.type === $W.GL.FRAGMENT_SHADER) {
-            $W.debug("compiling '" + this.name + "' as vertex shader");
+            $W.debug("compiling '" + this.name + "' as fragment shader");
         }else {
             console.error("compiling '" + this.name + "' as unknown type " + this.type);
         }   

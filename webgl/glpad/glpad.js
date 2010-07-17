@@ -40,13 +40,19 @@ function init() {
 
 
     //init gui
-    var geometryTC = new TemplateControl('geometryCode', 'applyGeometryCode', 'geometryPreset');
-    geometryTC.onapply = setGeometryCode;
+    var applyButton = document.getElementById('apply');
+    var geometryTC = new TemplateControl('geometryCode', 'geometryPreset');
+    geometryTC.onchange = function() { applyButton.disabled = false; };
+    geometryTC.addTemplate('triangle', 
+'    attributes.vertex = [\n' +
+'        0.0,  1.0,  0.0,\n'+
+'       -1.0, -1.0,  0.0,\n'+
+'        1.0, -1.0,  0.0 ];');
     geometryTC.addTemplate('plane', '//TODO: make a plane');
     geometryTC.addTemplate('cube', '//TODO: make a cube');
     
-    var vertexTC = new TemplateControl('vertexShader', 'applyVertexShader', 'vertexShaderPreset');
-    vertexTC.onapply = setVertexShader;
+    var vertexTC = new TemplateControl('vertexShader', 'vertexShaderPreset');
+    vertexTC.onchange = function() { applyButton.disabled = false; };
     vertexTC.addTemplate('default',
                          'attribute vec4 vertex;\n' +
                          'uniform mat4 uMVMatrix;\n' +
@@ -58,21 +64,30 @@ function init() {
                          '  gl_Position = uPMatrix * uMVMatrix * vertex;\n' +
                          '}\n');
 
-    var fragmentTC = new TemplateControl('fragmentShader', 'applyFragmentShader', 'fragmentShaderPreset');
-    fragmentTC.onapply = setFragmentShader;
+    var fragmentTC = new TemplateControl('fragmentShader', 'fragmentShaderPreset');
+    fragmentTC.onchange = function() { applyButton.disabled = false;};
     fragmentTC.addTemplate('default',
                            'varying vec4 outColor;\n' +
                            'void main() {\n' +
                            '  gl_FragColor = outColor;\n' +
                            '}\n');
 
+    applyButton.onclick = function() {
+        setVertexShader(vertexTC.getText());
+        setFragmentShader(fragmentTC.getText());
+        setGeometryCode(geometryTC.getText());
+        tryRelink();
+        setShaderData();
+        applyButton.disabled = true;
+    };
+
 
     vertexTC.selectTemplate(0);
     fragmentTC.selectTemplate(0);
-    geometryTC.selectTemplate(0);
+    geometryTC.selectTemplate(2);
+    applyButton.onclick();
 
     tryRelink();
-    setShaderData();
 
     // Setup render function
     setInterval(render, 200);
@@ -135,14 +150,16 @@ function setShaderData()
   indices = flat array of integers referencing vertex arrays
 */
 function setGeometryCode(code) {
-    // FIXME: These objects needs to be cleaned up
+    if (attributes) {
+        for (var attr in attributes) {
+            gl.deleteBuffer(attributes[attr].buffer);
+        };
+    }
+
     attributes = {}
     uniforms = {}
 
-    attributes.vertex = [
-        0.0,  1.0,  0.0,
-       -1.0, -1.0,  0.0,
-        1.0, -1.0,  0.0 ];
+    eval(code);
 
     return true;
 }
@@ -222,11 +239,9 @@ function appendLog(htmlText) {
 
 
 
-function TemplateControl(textAreaId, applyButtonId, selectListId) {
+function TemplateControl(textAreaId, selectListId) {
     var textArea = document.getElementById(textAreaId);
-    var applyButton = document.getElementById(applyButtonId);
     var selectList = document.getElementById(selectListId);
-    var blockUpdate = false;
     var me = this;
     var templates = new Object();
 
@@ -236,10 +251,8 @@ function TemplateControl(textAreaId, applyButtonId, selectListId) {
         var selectedName = selectList.options[selectList.selectedIndex].value;
         if (selectedName != 'custom') {
             var text = templates[selectedName];
-            blockUpdate = true;
             textArea.value = text;
-            blockUpdate = false;
-            applyButton.onclick();
+            if (me.onchange) me.onchange();
         }
     };
 
@@ -248,17 +261,9 @@ function TemplateControl(textAreaId, applyButtonId, selectListId) {
     }
 
     textArea.onchange = function() {
-        if (!blockUpdate) {
-            applyButton.disabled = false;
-            selectList.selectedIndex = selectList.options.length-1;
-        }
-    };
-
-    applyButton.onclick = function() {
-        if (me.onapply) {
-            if (me.onapply(textArea.value))
-                applyButton.disabled = true;
-        }
+        selectList.selectedIndex = selectList.options.length-1;
+        if (me.onchange)
+            me.onchange();
     };
 
     this.addTemplate = function(name, script) {
@@ -271,5 +276,7 @@ function TemplateControl(textAreaId, applyButtonId, selectListId) {
     this.selectTemplate = function(index) {
         selectList.selectedIndex = index;
         selectList.onchange();
-    }
+    };
+
+    this.getText = function() { return textArea.value; };
 }

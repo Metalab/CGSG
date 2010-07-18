@@ -76,7 +76,7 @@ function init() {
     applyButton.onclick();
 
     // Setup render function
-    setInterval(render, 200);
+    setInterval(render, 60);
 }
 
 function compileShader(shader, source) {
@@ -167,7 +167,7 @@ function setGeometryCode(code) {
     }
 
     attributes = {};
-    uniforms = { time: function() { return 5; }, modelViewMatrix: function() { return mvMatrix.flatten(); }, projectionMatrix: function() { return pMatrix.flatten(); }};
+    uniforms = { time: function() { return elapsed; }, modelViewMatrix: function() { return mvMatrix.flatten(); }, projectionMatrix: function() { return pMatrix.flatten(); }};
     vbo = {};
 
     eval(code);
@@ -201,7 +201,16 @@ function perspective(fovy, aspect, znear, zfar) {
     pMatrix = makePerspective(fovy, aspect, znear, zfar);
 }
 
+var firstFrameDate;
+var elapsed=0;
 function render() {
+    if (!firstFrameDate) {
+        firstFrameDate = new Date();
+    } else {
+        elapsed = new Date() - firstFrameDate;
+    }
+
+
     //window.console.log("render()");
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -210,7 +219,7 @@ function render() {
     perspective(45, 1.0, 0.1, 100.0);
     loadIdentity();
     mvTranslate([0.0, 0.0, -7.0]);
-    mvRotate(45,[1,1,1]);
+    mvRotate(elapsed / 100,[1,1,1]);
 
     // Render FBO
     for (var attr in attributes) {

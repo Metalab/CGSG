@@ -121,12 +121,26 @@ function setShaderData()
         }
     }
 
+    for (var uni in uniforms) {
+        uniforms[uni].id = gl.getUniformLocation(shaderProgram, uni);
+        if (uniforms[uni].id == -1) {
+            logInfo("Warning: Uniform '" + uni + "' specified by geometry but not supported in shader. Ignoring uniform.");
+        }
+    }
+
     // Verify that all vertex attributes expected by the shader are specified
     for (var i=0;i<vertexShader.attributes.length;i++) {
         if (!(vertexShader.attributes[i] in attributes)) {
-            logInfo("Expected vertex shader attribute missing: " + vertexShader.attributes[i]);
+            logError("Expected vertex shader attribute missing: " + vertexShader.attributes[i]);
         }
     }
+
+    // Verify that all uniforms expected by the shader are specified
+    for (var i=0;i<vertexShader.uniforms.length;i++) {
+        if (!(vertexShader.uniforms[i] in uniforms)) {
+            logError("Expected vertex shader attribute missing: " + vertexShader.uniforms[i]);
+        }
+    } 
 
     if (vbo.indices) {
         vbo.buffer = gl.createBuffer();
@@ -153,10 +167,12 @@ function setGeometryCode(code) {
     }
 
     attributes = {};
-    uniforms = {};
+    uniforms = { time: function() { return 5; }, modelViewMatrix: function() { return mvMatrix.flatten(); }, projectionMatrix: function() { return pMatrix.flatten(); }};
     vbo = {};
 
     eval(code);
+
+
 
     // FIXME: Fill inn default itemsize/numitems here?
 
@@ -203,9 +219,27 @@ function render() {
             gl.vertexAttribPointer(attributes[attr].id, attributes[attr].itemsize, gl.FLOAT, false, 0, 0);
         }
     }
-    // Camera emulation
-    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, new WebGLFloatArray(pMatrix.flatten()));
-    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, new WebGLFloatArray(mvMatrix.flatten()));
+
+
+    for (var uni in uniforms) {
+        if (uniforms[uni].id !== -1) {
+            var value = uniforms[uni];
+            while (typeof(value) == 'function') value = value();
+            if (typeof(value) == 'number')
+                gl.uniform1f(uniforms[uni].id, value);
+            else
+                if (!('length' in value)) 
+                    logError('invalid uniform value for "'+uni+'"');
+                else {
+                    if (value.length <= 4)
+                        gl['uniform' + value.length + 'fv'](uniforms[uni].id, value);
+                    else if (value.length == 16)
+                        gl.uniformMatrix4fv(uniforms[uni].id, false, new WebGLFloatArray(value));
+                    else
+                        logError('unsupported uniform length ' + value.length + ' for "'+uni+'"');
+                }
+        }
+    }
 
     if (vbo.indices) {
         gl.drawElements(vbo.mode, vbo.numitems, gl.UNSIGNED_SHORT, 0);

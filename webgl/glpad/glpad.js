@@ -58,6 +58,7 @@ function init() {
     fragmentTC.addTemplate('default', loadTextFile('frag/default.frag'));
 
     applyButton.onclick = function() {
+        clearLog();
         setVertexShader(vertexTC.getText());
         setFragmentShader(fragmentTC.getText());
         setGeometryCode(geometryTC.getText());
@@ -71,8 +72,6 @@ function init() {
     fragmentTC.selectTemplate(0);
     geometryTC.selectTemplate(2);
     applyButton.onclick();
-
-    tryRelink();
 
     // Setup render function
     setInterval(render, 200);
@@ -226,6 +225,10 @@ function logInfo(message){
 
 function appendLog(htmlText) {
     logContainer.innerHTML = logContainer.innerHTML + htmlText;
+}
+
+function clearLog() { 
+    logContainer.innerHTML = '';
 }
 
 

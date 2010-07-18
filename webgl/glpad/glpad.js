@@ -44,166 +44,18 @@ function init() {
     var applyButton = document.getElementById('apply');
     var geometryTC = new TemplateControl('geometryCode', 'geometryPreset');
     geometryTC.onchange = function() { applyButton.disabled = false; };
-    geometryTC.addTemplate('triangle', 
-                           '    attributes.vertex = [\n' +
-                           '        0.0,  1.0,  0.0,\n'+
-                           '       -1.0, -1.0,  0.0,\n'+
-                           '        1.0, -1.0,  0.0 ];\n' +
-                           '    attributes.vertex.itemsize = 3;\n' +
-                           '    vbo.mode = gl.TRIANGLES;\n' +
-                           '    vbo.numitems = 3;');
-
-    geometryTC.addTemplate('plane',
-                           'attributes.vertex = [\n' +
-                           '    1.0,  1.0,  0.0,\n' +
-                           '   -1.0,  1.0,  0.0,\n' +
-                           '    1.0, -1.0,  0.0,\n' +
-                           '   -1.0, -1.0,  0.0 ];\n' +
-                           'attributes.vertex.itemsize = 3;\n' +
-                           'vbo.mode = gl.TRIANGLE_STRIP;\n' +
-                           'vbo.numitems = 4;\n');
-
-    geometryTC.addTemplate('house',
-'    attributes.vertex = [\n' +
-'        // front\n' +
-'        -1, 0, 1,\n' +
-'         1, 0, 1,\n' +
-'         1, 2, 1,\n' +
-'\n' +
-'        -1, 0, 1,\n' +
-'         1, 2, 1,\n' +
-'        -1, 2, 1,\n' +
-'        \n' +
-'        // back\n' +
-'        -1, 0, -1,\n' +
-'         1, 2, -1,\n' +
-'         1, 0, -1,\n' +
-'\n' +
-'        -1, 0, -1,\n' +
-'        -1, 2, -1,\n' +
-'         1, 2, -1,\n' +
-'\n' +
-'        // left \n' +
-'        -1, 0, -1,\n' +
-'        -1, 0,  1,\n' +
-'        -1, 2,  1,\n' +
-'\n' +
-'        -1, 0, -1,\n' +
-'        -1, 2,  1,\n' +
-'        -1, 2, -1,\n' +
-'\n' +
-'        // right\n' +
-'         1, 0,  1,\n' +
-'         1, 0, -1,\n' +
-'         1, 2, -1,\n' +
-'\n' +
-'         1, 0,  1,\n' +
-'         1, 2, -1,\n' +
-'         1, 2,  1,\n' +
-'\n' +
-'        // front\n' +
-'        -1, 2, 1,\n' +
-'         1, 2, 1,\n' +
-'         0, 4, 0,\n' +
-'        \n' +
-'        // right\n' +
-'        1, 2,  1,\n' +
-'        1, 2, -1,\n' +
-'        0, 4,  0,\n' +
-'        \n' +
-'        // back\n' +
-'         1, 2, -1,\n' +
-'        -1, 2, -1,\n' +
-'         0, 4,  0,\n' +
-'        \n' +
-'        // left \n' +
-'        -1, 2,  1,\n' +
-'         0, 4,  0,\n' +
-'        -1, 2, -1 ];\n' +
-'    attributes.vertex.itemsize = 3;\n' +
-'\n' +
-'    attributes.color = [\n' +
-'        0, 1, 0,\n' +
-'        0, 1, 0,\n' +
-'        0, 1, 0,\n' +
-'        0, 1, 0,\n' +
-'        0, 1, 0,\n' +
-'        0, 1, 0,\n' +
-'\n' +
-'        0, 0.8, 0,\n' +
-'        0, 0.8, 0,\n' +
-'        0, 0.8, 0,\n' +
-'        0, 0.8, 0,\n' +
-'        0, 0.8, 0,\n' +
-'        0, 0.8, 0,\n' +
-'\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'        0, 0.6, 0,\n' +
-'\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0,\n' +
-'        1, 1, 0 ];\n' +
-'    attributes.color.itemsize = 3;\n' +
-'\n' +
-'    vbo.mode = gl.TRIANGLES;\n' +
-                           '    vbo.numitems = 36;\n');
-
-    geometryTC.addTemplate('cube', '//TODO: make a cube');
+    geometryTC.addTemplate('triangle',loadTextFile('geom/triangle.js'));
+    geometryTC.addTemplate('plane', loadTextFile('geom/plane.js'));
+    geometryTC.addTemplate('house', loadTextFile('geom/house.js'));
     
     var vertexTC = new TemplateControl('vertexShader', 'vertexShaderPreset');
     vertexTC.onchange = function() { applyButton.disabled = false; };
-    vertexTC.addTemplate('vertexcolor',
-                         'attribute vec4 vertex;\n' +
-                         'attribute vec4 color;\n' +
-                         'uniform mat4 uMVMatrix;\n' +
-                         'uniform mat4 uPMatrix;\n' +
-                         'varying vec4 outColor;\n' +
-                         '\n' +
-                         'void main() {\n' +
-                         '  outColor = color;\n' +
-                         '  gl_Position = uPMatrix * uMVMatrix * vertex;\n' +
-                         '}\n');
-    vertexTC.addTemplate('default',
-                         'attribute vec4 vertex;\n' +
-                         'uniform mat4 uMVMatrix;\n' +
-                         'uniform mat4 uPMatrix;\n' +
-                         'varying vec4 outColor;\n' +
-                         '\n' +
-                         'void main() {\n' +
-                         '  outColor = vec4(1,1,0,1);\n' +
-                         '  gl_Position = uPMatrix * uMVMatrix * vertex;\n' +
-                         '}\n');
+    vertexTC.addTemplate('vertexcolor', loadTextFile('vert/vertexcolor.vert'));
+    vertexTC.addTemplate('default', loadTextFile('vert/default.vert'));
 
     var fragmentTC = new TemplateControl('fragmentShader', 'fragmentShaderPreset');
     fragmentTC.onchange = function() { applyButton.disabled = false;};
-    fragmentTC.addTemplate('default',
-                           'varying vec4 outColor;\n' +
-                           'void main() {\n' +
-                           '  gl_FragColor = outColor;\n' +
-                           '}\n');
+    fragmentTC.addTemplate('default', loadTextFile('frag/default.frag'));
 
     applyButton.onclick = function() {
         setVertexShader(vertexTC.getText());
@@ -288,7 +140,7 @@ function setGeometryCode(code) {
     if (attributes) {
         for (var attr in attributes) {
             if (attributes[attr].id >= 0) gl.disableVertexAttribArray(attributes[attr].id);
-            if (attributes[attr].buffer >= 0) gl.deleteBuffer(attributes[attr].buffer);
+            if (attributes[attr].buffer !== -1) gl.deleteBuffer(attributes[attr].buffer);
         };
     }
 
@@ -330,8 +182,10 @@ function render() {
 
     // Render FBO
     for (var attr in attributes) {
-        gl.bindBuffer(gl.ARRAY_BUFFER, attributes[attr].buffer);
-        gl.vertexAttribPointer(attributes[attr].id, attributes[attr].itemsize, gl.FLOAT, false, 0, 0);
+        if (attributes[attr].buffer !== -1) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, attributes[attr].buffer);
+            gl.vertexAttribPointer(attributes[attr].id, attributes[attr].itemsize, gl.FLOAT, false, 0, 0);
+        }
     }
     // Camera emulation
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, new WebGLFloatArray(pMatrix.flatten()));
@@ -416,4 +270,59 @@ function TemplateControl(textAreaId, selectListId) {
     };
 
     this.getText = function() { return textArea.value; };
+}
+
+function loadTextFile(path) {
+    var xhr = null;
+    xhr = new XMLHttpRequest();
+
+    if (!xhr) return null; 
+            
+
+    // Changed from text/xml to text/plan since we're usually 
+    // reading javascript or shaders.
+    xhr.overrideMimeType("text/plain");
+
+    // Deal with firefox security for file:// urls
+    try {
+        var nsPM = null;
+        if (typeof(netscape) !== 'undefined' && 
+            typeof(netscape.security) !== 'undefined' && 
+            typeof(netscape.security.PrivilegeManager) !== 'undefined') {
+            nsPM = netscape.security.PrivilegeManager;
+        }
+        if (document.location.href.match(/^file:\/\//)) {
+            if (nsPM !== null) {
+                nsPM.enablePrivilege("UniversalBrowserRead");
+            }
+        }
+    }catch (e) {
+        logError(e);
+        throw "\tBrowser security may be restrcting access to local files";
+    }
+
+    try {
+        xhr.open("GET", path, false);
+
+        // Ignore cache if the file is served from localhost or is at a
+        // file:// url as it's safe to assume that's a developer.
+        var url = window.location.href;
+        if (    url.match(/^http:\/\/localhost/) !== null ||
+                url.match(/^http:\/\/127\.0\.0\.1/) !== null ||
+                url.match(/^file:/) !== null) {
+            xhr.setRequestHeader('Pragma', 'Cache-Control: no-cache');
+        }
+
+        xhr.send(null);
+    }catch (e) { 
+        throw e; 
+    }
+
+    //allow status 0 since file loads don't report http status codes
+    if (xhr.status !== 200 && xhr.status !== 0) {
+        logError("\tCompleted with status: " + xhr.status);
+        return "File load error: " + xhr.status;
+    }else {
+        return xhr.responseText;
+    }
 }

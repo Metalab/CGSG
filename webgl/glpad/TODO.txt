@@ -1,5 +1,4 @@
 GUI:
-o Extract glClearColor from HTML
 o Checkbox for enable/disable automatic ModelViewMatrix rotation
 o Trackball rotation using mouse
 o Zoom and pan using mouse

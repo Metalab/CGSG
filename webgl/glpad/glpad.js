@@ -35,7 +35,7 @@ function init() {
         gl.attachShader(shaderProgram, fragmentShader);
 
         // FIXME: Read background color from the DOM?
-        gl.clearColor(0.5, 0.0, 0.0, 1.0)
+        gl.clearColor(1.0, 1.0, 1.0, 0.8)
         gl.clearDepth(1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);

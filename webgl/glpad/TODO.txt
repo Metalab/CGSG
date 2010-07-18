@@ -9,6 +9,8 @@ o Texture support
 o Call gl.verifyProgram() to be able to detect more errors
 o Clean up state between each frame to avoid leaking state
 o Look more closely at per-frame VBO operations. What is actually necessary?
+o Auto-load all shaders and geometry from index files
+  Auto-generate index-files
 
 Example shaders:
 o Texture

@@ -44,9 +44,11 @@ function init() {
     var applyButton = document.getElementById('apply');
     var geometryTC = new TemplateControl('geometryCode', 'geometryPreset');
     geometryTC.onchange = function() { applyButton.disabled = false; };
+
     geometryTC.addTemplate('triangle',loadTextFile('geom/triangle.js'));
     geometryTC.addTemplate('plane', loadTextFile('geom/plane.js'));
     geometryTC.addTemplate('house', loadTextFile('geom/house.js'));
+    geometryTC.addTemplate('cube', loadTextFile('geom/cube.js'));
     
     var vertexTC = new TemplateControl('vertexShader', 'vertexShaderPreset');
     vertexTC.onchange = function() { applyButton.disabled = false; };
@@ -92,7 +94,6 @@ function compileShader(shader, source) {
 function setVertexShader(shaderText) {
     window.console.log("setVertexShader()\n" + shaderText);
     vertexShader.attributes = ExtractAttributesFromShaderSource(shaderText);
-    logInfo("vertex shader attributes: " + vertexShader.attributes)
     vertexShader.uniforms = ExtractUniformsFromShaderSource(shaderText);
     return compileShader(vertexShader, shaderText);
 }
@@ -107,7 +108,7 @@ function setShaderData()
     for (var attr in attributes) {
         attributes[attr].id = gl.getAttribLocation(shaderProgram, attr);
         if (attributes[attr].id == -1) {
-            logInfo("Warning: Attribute '" + attr + "' specified by geometry but not supported in shader");
+            logInfo("Warning: Attribute '" + attr + "' specified by geometry but not supported in shader. Ignoring attribute array.");
             attributes[attr].buffer = -1;
         }
         else {
@@ -126,6 +127,13 @@ function setShaderData()
             logInfo("Expected vertex shader attribute missing: " + vertexShader.attributes[i]);
         }
     }
+
+    if (vbo.indices) {
+        vbo.buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vbo.buffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new WebGLUnsignedShortArray(vbo.indices), gl.STATIC_DRAW);
+    }
+
 }
 
 /*
@@ -136,6 +144,7 @@ function setShaderData()
   indices = flat array of integers referencing vertex arrays
 */
 function setGeometryCode(code) {
+    if (vbo.buffer) gl.deleteBuffer(vbo.buffer);
     if (attributes) {
         for (var attr in attributes) {
             if (attributes[attr].id >= 0) gl.disableVertexAttribArray(attributes[attr].id);
@@ -143,11 +152,13 @@ function setGeometryCode(code) {
         };
     }
 
-    attributes = {}
-    uniforms = {}
+    attributes = {};
+    uniforms = {};
+    vbo = {};
 
     eval(code);
 
+    // FIXME: Fill inn default itemsize/numitems here?
 
     return true;
 }
@@ -164,6 +175,11 @@ function mvTranslate(v) {
     var m = Matrix.Translation($V([v[0], v[1], v[2]])).ensure4x4();
     multMatrix(m);
 }
+function mvRotate(ang, v) {
+    var arad = ang * Math.PI / 180.0;
+    var m = Matrix.Rotation(arad, $V([v[0], v[1], v[2]])).ensure4x4();
+    multMatrix(m);
+}
 var pMatrix;
 function perspective(fovy, aspect, znear, zfar) {
     pMatrix = makePerspective(fovy, aspect, znear, zfar);
@@ -178,6 +194,7 @@ function render() {
     perspective(45, 1.0, 0.1, 100.0);
     loadIdentity();
     mvTranslate([0.0, 0.0, -7.0]);
+    mvRotate(45,[1,1,1]);
 
     // Render FBO
     for (var attr in attributes) {
@@ -190,9 +207,12 @@ function render() {
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, new WebGLFloatArray(pMatrix.flatten()));
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, new WebGLFloatArray(mvMatrix.flatten()));
 
-    //non-indexed:
-    gl.drawArrays(vbo.mode, 0, vbo.numitems);
-    //indexed: gl.drawElements(...)
+    if (vbo.indices) {
+        gl.drawElements(vbo.mode, vbo.numitems, gl.UNSIGNED_SHORT, 0);
+    }
+    else {
+        gl.drawArrays(vbo.mode, 0, vbo.numitems);
+    }
 }
 
 

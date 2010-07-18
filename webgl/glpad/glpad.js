@@ -1,3 +1,10 @@
+//to integrate new shader or geometry presets, just add the file name without extension 
+//to this list and place the file in the respective directory
+// the first entry of the list will be used as the default
+var geometryFiles = [ 'triangle', 'plane', 'house', 'cube' ];
+var vertexShaderFiles = [ 'default', 'vertexcolor' ];
+var fragmentShaderFiles = [ 'default'];
+
 var gl;
 var vertexShader, fragmentShader, shaderProgram;
 var attributes, uniforms;
@@ -38,26 +45,20 @@ function init() {
         return;
     }
 
-
+    geometryFiles = geometryFiles.reverse();
+    vertexShaderFiles = vertexShaderFiles.reverse();
+    fragmentShaderFiles = fragmentShaderFiles.reverse();
 
     //init gui
     var applyButton = document.getElementById('apply');
     var geometryTC = new TemplateControl('geometryCode', 'geometryPreset');
     geometryTC.onchange = function() { applyButton.disabled = false; };
 
-    geometryTC.addTemplate('triangle',loadTextFile('geom/triangle.js'));
-    geometryTC.addTemplate('plane', loadTextFile('geom/plane.js'));
-    geometryTC.addTemplate('house', loadTextFile('geom/house.js'));
-    geometryTC.addTemplate('cube', loadTextFile('geom/cube.js'));
-    
     var vertexTC = new TemplateControl('vertexShader', 'vertexShaderPreset');
     vertexTC.onchange = function() { applyButton.disabled = false; };
-    vertexTC.addTemplate('vertexcolor', loadTextFile('vert/vertexcolor.vert'));
-    vertexTC.addTemplate('default', loadTextFile('vert/default.vert'));
 
     var fragmentTC = new TemplateControl('fragmentShader', 'fragmentShaderPreset');
     fragmentTC.onchange = function() { applyButton.disabled = false;};
-    fragmentTC.addTemplate('default', loadTextFile('frag/default.frag'));
 
     applyButton.onclick = function() {
         clearLog();
@@ -69,10 +70,20 @@ function init() {
         applyButton.disabled = true;
     };
 
+    //load presets
+    for(var i=0; i < geometryFiles.length; i++)
+        geometryTC.addTemplate(geometryFiles[i], loadTextFile('geom/' + geometryFiles[i] + '.js'));
 
+    for(var i=0; i < vertexShaderFiles.length; i++)
+        vertexTC.addTemplate(vertexShaderFiles[i], loadTextFile('vert/' + vertexShaderFiles[i] + '.vert'));
+
+    for(var i=0; i < fragmentShaderFiles.length; i++)
+        fragmentTC.addTemplate(fragmentShaderFiles[i], loadTextFile('frag/' + fragmentShaderFiles[i] + '.frag'));
+
+    //select presets
     vertexTC.selectTemplate(0);
     fragmentTC.selectTemplate(0);
-    geometryTC.selectTemplate(2);
+    geometryTC.selectTemplate(0);
     applyButton.onclick();
 
     // Setup render function

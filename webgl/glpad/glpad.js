@@ -43,7 +43,7 @@ function init() {
         texture = gl.createTexture();
 
         // FIXME: Read background color from the DOM?
-        gl.clearColor(0.8, 1.0, 1.0, 1.0)
+        gl.clearColor(0.6, .7, 0.7, 1.0)
         gl.clearDepth(1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);

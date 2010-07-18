@@ -4,15 +4,13 @@ o Trackball rotation using mouse
 o Zoom and pan using mouse
 
 Infrastructure:
-o Texture support
+o Improved Texture support (texture format, multitexturing)
 o Call gl.verifyProgram() to be able to detect more errors
 o Clean up state between each frame to avoid leaking state
 o Look more closely at per-frame VBO operations. What is actually necessary?
-o Auto-load all shaders and geometry from index files
-  Auto-generate index-files
+o Auto-generate shader and geometry index
 
 Example shaders:
-o Texture
 o Light
 o Lit texture
 

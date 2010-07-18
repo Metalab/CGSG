@@ -217,8 +217,12 @@ function setGeometryCode(code) {
     attributes = {};
     uniforms = { time: function() { return elapsed; }, modelViewMatrix: function() { return mvMatrix.flatten(); }, projectionMatrix: function() { return pMatrix.flatten(); }};
     vbo = {};
-
-    eval(code);
+    try {
+        eval(code);
+    } catch(e) {
+        logError(e);
+        return false;
+    }
 
 
 

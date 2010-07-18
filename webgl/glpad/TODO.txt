@@ -15,6 +15,5 @@ o Light
 o Lit texture
 
 Example objects:
-o Sphere
 o Torus
 o Teapot

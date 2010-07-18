@@ -1,0 +1,17 @@
+GUI:
+o Checkbox for enable/disable automatic ModelViewMatrix rotation
+o Trackball rotation using mouse
+o Zoom and pan using mouse
+
+Infrastructure:
+o Texture support
+
+Example shaders:
+o Texture
+o Light
+o Lit texture
+
+Example objects:
+o Sphere
+o Torus
+o Teapot

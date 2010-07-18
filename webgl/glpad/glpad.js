@@ -1,15 +1,23 @@
 //to integrate new shader or geometry presets, just add the file name without extension 
 //to this list and place the file in the respective directory
 // the first entry of the list will be used as the default
-var geometryFiles = [ 'triangle', 'plane', 'house', 'cube' ];
-var vertexShaderFiles = [ 'default', 'vertexcolor' ];
-var fragmentShaderFiles = [ 'default'];
+var geometryFiles = [ 'triangle', 'plane', 'texplane', 'house', 'cube' ];
+var vertexShaderFiles = [ 'default', 'texture', 'vertexcolor' ];
+var fragmentShaderFiles = [ 'default', 'texture' ];
 
 var gl;
-var vertexShader, fragmentShader, shaderProgram;
+var vertexShader, fragmentShader, shaderProgram, texture;
 var attributes, uniforms;
 var vbo = { }
 var logContainer;
+
+function handleLoadedTexture(texture) {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, texture.image, true);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
 
 function init() {
     //logging
@@ -33,9 +41,10 @@ function init() {
         shaderProgram = gl.createProgram();
         gl.attachShader(shaderProgram, vertexShader);
         gl.attachShader(shaderProgram, fragmentShader);
+        texture = gl.createTexture();
 
         // FIXME: Read background color from the DOM?
-        gl.clearColor(1.0, 1.0, 1.0, 0.8)
+        gl.clearColor(0.8, 1.0, 1.0, 1.0)
         gl.clearDepth(1.0);
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
@@ -65,8 +74,7 @@ function init() {
         setVertexShader(vertexTC.getText());
         setFragmentShader(fragmentTC.getText());
         setGeometryCode(geometryTC.getText());
-        tryRelink();
-        setShaderData();
+        if (tryRelink()) setShaderData();
         applyButton.disabled = true;
     };
 
@@ -111,6 +119,7 @@ function setVertexShader(shaderText) {
 
 function setFragmentShader(shaderText) {
     window.console.log("setFragmentShader()...");
+    fragmentShader.uniforms = ExtractUniformsFromShaderSource(shaderText);
     return compileShader(fragmentShader, shaderText);
 }
 
@@ -133,9 +142,24 @@ function setShaderData()
     }
 
     for (var uni in uniforms) {
-        uniforms[uni].id = gl.getUniformLocation(shaderProgram, uni);
-        if (uniforms[uni].id == -1) {
+        var uniform = uniforms[uni];
+        uniform.id = gl.getUniformLocation(shaderProgram, uni);
+        if (uniform.id == -1) {
             logInfo("Warning: Uniform '" + uni + "' specified by geometry but not supported in shader. Ignoring uniform.");
+        }
+        else {
+            if (typeof(uniform) == 'string') { // Treat as texture
+                texture.image = new Image();
+                texture.image.onload = function() {
+                    logInfo("Texture loaded.");
+                    gl.bindTexture(gl.TEXTURE_2D, texture);
+                    gl.texImage2D(gl.TEXTURE_2D, 0, texture.image, true);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                    gl.bindTexture(gl.TEXTURE_2D, null);
+                }
+                texture.image.src = uniform;
+            }
         }
     }
 
@@ -146,10 +170,15 @@ function setShaderData()
         }
     }
 
-    // Verify that all uniforms expected by the shader are specified
+    // Verify that all uniforms expected by the shaders are specified
     for (var i=0;i<vertexShader.uniforms.length;i++) {
         if (!(vertexShader.uniforms[i] in uniforms)) {
-            logError("Expected vertex shader attribute missing: " + vertexShader.uniforms[i]);
+            logError("Expected vertex shader uniform missing: " + vertexShader.uniforms[i]);
+        }
+    } 
+    for (var i=0;i<fragmentShader.uniforms.length;i++) {
+        if (!(fragmentShader.uniforms[i] in uniforms)) {
+            logError("Expected fragment shader uniform missing: " + fragmentShader.uniforms[i]);
         }
     } 
 
@@ -240,13 +269,18 @@ function render() {
         }
     }
 
-
     for (var uni in uniforms) {
         if (uniforms[uni].id !== -1) {
             var value = uniforms[uni];
             while (typeof(value) == 'function') value = value();
             if (typeof(value) == 'number')
                 gl.uniform1f(uniforms[uni].id, value);
+            else if (typeof(value) == 'string') {
+                // FIXME: Hardcoded to be a texture using unit 0
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, texture);
+                gl.uniform1i(uniforms[uni].id, 0);
+            }
             else
                 if (!('length' in value)) 
                     logError('invalid uniform value for "'+uni+'"');

@@ -61,6 +61,45 @@ attributes.color = [
     0.0, 0.0, 1.0, 1.0,
     0.0, 0.0, 1.0, 1.0 ];
 attributes.color.itemsize = 4;
+
+attributes.texCoord = [
+    // Front face
+    0.0, 0.0,
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0,
+    
+    // Back face
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0,
+    0.0, 0.0,
+    
+    // Top face
+    0.0, 1.0,
+    0.0, 0.0,
+    1.0, 0.0,
+    1.0, 1.0,
+    
+    // Bottom face
+    1.0, 1.0,
+    0.0, 1.0,
+    0.0, 0.0,
+    1.0, 0.0,
+    
+    // Right face
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0,
+    0.0, 0.0,
+    
+    // Left face
+    0.0, 0.0,
+    1.0, 0.0,
+    1.0, 1.0,
+    0.0, 1.0 ];
+attributes.texCoord.itemsize = 2;
+
 vbo.mode = gl.TRIANGLES;
 vbo.indices = [
     0, 1, 2,      0, 2, 3,    // Front face

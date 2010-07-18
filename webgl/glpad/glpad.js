@@ -11,12 +11,11 @@ var attributes, uniforms;
 var vbo = { }
 var logContainer;
 
-function handleLoadedTexture(texture) {
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, texture.image, true);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.bindTexture(gl.TEXTURE_2D, null);
+function checkGLError() {
+    err = gl.getError();
+    if (err != gl.NO_ERROR) {
+        logError('GL Error: ' + err);
+    }
 }
 
 function init() {
@@ -49,6 +48,7 @@ function init() {
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
 
+        checkGLError();
     } catch(e) {
         alert('error initializing webgl: ' + e);
         return;
@@ -76,6 +76,7 @@ function init() {
         setGeometryCode(geometryTC.getText());
         if (tryRelink()) setShaderData();
         applyButton.disabled = true;
+        checkGLError();
     };
 
     //load presets
@@ -89,9 +90,9 @@ function init() {
         fragmentTC.addTemplate(fragmentShaderFiles[i], loadTextFile('frag/' + fragmentShaderFiles[i] + '.frag'));
 
     //select presets
-    vertexTC.selectTemplate(0);
-    fragmentTC.selectTemplate(0);
-    geometryTC.selectTemplate(0);
+    vertexTC.selectTemplate(1);
+    fragmentTC.selectTemplate(1);
+    geometryTC.selectTemplate(2);
     applyButton.onclick();
 
     // Setup render function
@@ -111,7 +112,7 @@ function compileShader(shader, source) {
 }
 
 function setVertexShader(shaderText) {
-    window.console.log("setVertexShader()\n" + shaderText);
+    window.console.log("setVertexShader()...");
     vertexShader.attributes = ExtractAttributesFromShaderSource(shaderText);
     vertexShader.uniforms = ExtractUniformsFromShaderSource(shaderText);
     return compileShader(vertexShader, shaderText);
@@ -307,12 +308,12 @@ function render() {
 function tryRelink() {
     window.console.log("Linking shaders...");
     gl.linkProgram(shaderProgram);
+    gl.validateProgram(shaderProgram);
     if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
         logError("error linking program:\n" +
                  gl.getProgramInfoLog(shaderProgram));
         return false;
     }
-    
     
     //FIXME: don't call this every time...
     gl.useProgram(shaderProgram);

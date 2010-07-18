@@ -15,4 +15,4 @@ attributes.texCoord.itemsize = 2;
 vbo.mode = gl.TRIANGLE_STRIP;
 vbo.numitems = 4;
 
-uniforms.texture = "wood.png"
+uniforms.texture = "textures/wood.png"

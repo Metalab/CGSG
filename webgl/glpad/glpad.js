@@ -1,6 +1,7 @@
 var gl;
 var vertexShader, fragmentShader, shaderProgram;
 var attributes, uniforms;
+var vbo = { }
 var logContainer;
 
 function init() {
@@ -44,15 +45,147 @@ function init() {
     var geometryTC = new TemplateControl('geometryCode', 'geometryPreset');
     geometryTC.onchange = function() { applyButton.disabled = false; };
     geometryTC.addTemplate('triangle', 
+                           '    attributes.vertex = [\n' +
+                           '        0.0,  1.0,  0.0,\n'+
+                           '       -1.0, -1.0,  0.0,\n'+
+                           '        1.0, -1.0,  0.0 ];\n' +
+                           '    attributes.vertex.itemsize = 3;\n' +
+                           '    vbo.mode = gl.TRIANGLES;\n' +
+                           '    vbo.numitems = 3;');
+
+    geometryTC.addTemplate('plane',
+                           'attributes.vertex = [\n' +
+                           '    1.0,  1.0,  0.0,\n' +
+                           '   -1.0,  1.0,  0.0,\n' +
+                           '    1.0, -1.0,  0.0,\n' +
+                           '   -1.0, -1.0,  0.0 ];\n' +
+                           'attributes.vertex.itemsize = 3;\n' +
+                           'vbo.mode = gl.TRIANGLE_STRIP;\n' +
+                           'vbo.numitems = 4;\n');
+
+    geometryTC.addTemplate('house',
 '    attributes.vertex = [\n' +
-'        0.0,  1.0,  0.0,\n'+
-'       -1.0, -1.0,  0.0,\n'+
-'        1.0, -1.0,  0.0 ];');
-    geometryTC.addTemplate('plane', '//TODO: make a plane');
+'        // front\n' +
+'        -1, 0, 1,\n' +
+'         1, 0, 1,\n' +
+'         1, 2, 1,\n' +
+'\n' +
+'        -1, 0, 1,\n' +
+'         1, 2, 1,\n' +
+'        -1, 2, 1,\n' +
+'        \n' +
+'        // back\n' +
+'        -1, 0, -1,\n' +
+'         1, 2, -1,\n' +
+'         1, 0, -1,\n' +
+'\n' +
+'        -1, 0, -1,\n' +
+'        -1, 2, -1,\n' +
+'         1, 2, -1,\n' +
+'\n' +
+'        // left \n' +
+'        -1, 0, -1,\n' +
+'        -1, 0,  1,\n' +
+'        -1, 2,  1,\n' +
+'\n' +
+'        -1, 0, -1,\n' +
+'        -1, 2,  1,\n' +
+'        -1, 2, -1,\n' +
+'\n' +
+'        // right\n' +
+'         1, 0,  1,\n' +
+'         1, 0, -1,\n' +
+'         1, 2, -1,\n' +
+'\n' +
+'         1, 0,  1,\n' +
+'         1, 2, -1,\n' +
+'         1, 2,  1,\n' +
+'\n' +
+'        // front\n' +
+'        -1, 2, 1,\n' +
+'         1, 2, 1,\n' +
+'         0, 4, 0,\n' +
+'        \n' +
+'        // right\n' +
+'        1, 2,  1,\n' +
+'        1, 2, -1,\n' +
+'        0, 4,  0,\n' +
+'        \n' +
+'        // back\n' +
+'         1, 2, -1,\n' +
+'        -1, 2, -1,\n' +
+'         0, 4,  0,\n' +
+'        \n' +
+'        // left \n' +
+'        -1, 2,  1,\n' +
+'         0, 4,  0,\n' +
+'        -1, 2, -1 ];\n' +
+'    attributes.vertex.itemsize = 3;\n' +
+'\n' +
+'    attributes.color = [\n' +
+'        0, 1, 0,\n' +
+'        0, 1, 0,\n' +
+'        0, 1, 0,\n' +
+'        0, 1, 0,\n' +
+'        0, 1, 0,\n' +
+'        0, 1, 0,\n' +
+'\n' +
+'        0, 0.8, 0,\n' +
+'        0, 0.8, 0,\n' +
+'        0, 0.8, 0,\n' +
+'        0, 0.8, 0,\n' +
+'        0, 0.8, 0,\n' +
+'        0, 0.8, 0,\n' +
+'\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'        0, 0.6, 0,\n' +
+'\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0,\n' +
+'        1, 1, 0 ];\n' +
+'    attributes.color.itemsize = 3;\n' +
+'\n' +
+'    vbo.mode = gl.TRIANGLES;\n' +
+                           '    vbo.numitems = 36;\n');
+
     geometryTC.addTemplate('cube', '//TODO: make a cube');
     
     var vertexTC = new TemplateControl('vertexShader', 'vertexShaderPreset');
     vertexTC.onchange = function() { applyButton.disabled = false; };
+    vertexTC.addTemplate('vertexcolor',
+                         'attribute vec4 vertex;\n' +
+                         'attribute vec4 color;\n' +
+                         'uniform mat4 uMVMatrix;\n' +
+                         'uniform mat4 uPMatrix;\n' +
+                         'varying vec4 outColor;\n' +
+                         '\n' +
+                         'void main() {\n' +
+                         '  outColor = color;\n' +
+                         '  gl_Position = uPMatrix * uMVMatrix * vertex;\n' +
+                         '}\n');
     vertexTC.addTemplate('default',
                          'attribute vec4 vertex;\n' +
                          'uniform mat4 uMVMatrix;\n' +
@@ -122,16 +255,18 @@ function setShaderData()
 {
     for (var attr in attributes) {
         attributes[attr].id = gl.getAttribLocation(shaderProgram, attr);
-        // error handling
-        gl.enableVertexAttribArray(attributes[attr].id);
+        if (attributes[attr].id == -1) {
+            logInfo("Warning: Attribute '" + attr + "' specified by geometry but not supported in shader");
+            attributes[attr].buffer = -1;
+        }
+        else {
+            gl.enableVertexAttribArray(attributes[attr].id);
 
-        // Create buffer and upload data
-        attributes[attr].buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, attributes[attr].buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new WebGLFloatArray(attributes[attr]), gl.STATIC_DRAW);
-        // FIXME:
-        attributes[attr].itemsize = 3;
-        attributes[attr].numitems = 3;
+            // Create buffer and upload data
+            attributes[attr].buffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, attributes[attr].buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new WebGLFloatArray(attributes[attr]), gl.STATIC_DRAW);
+        }
     }
 
     // Verify that all vertex attributes expected by the shader are specified
@@ -152,7 +287,8 @@ function setShaderData()
 function setGeometryCode(code) {
     if (attributes) {
         for (var attr in attributes) {
-            gl.deleteBuffer(attributes[attr].buffer);
+            if (attributes[attr].id >= 0) gl.disableVertexAttribArray(attributes[attr].id);
+            if (attributes[attr].buffer >= 0) gl.deleteBuffer(attributes[attr].buffer);
         };
     }
 
@@ -160,6 +296,7 @@ function setGeometryCode(code) {
     uniforms = {}
 
     eval(code);
+
 
     return true;
 }
@@ -189,7 +326,7 @@ function render() {
     // use of external functionality:
     perspective(45, 1.0, 0.1, 100.0);
     loadIdentity();
-    mvTranslate([-1.5, 0.0, -7.0]);
+    mvTranslate([0.0, 0.0, -7.0]);
 
     // Render FBO
     for (var attr in attributes) {
@@ -201,7 +338,7 @@ function render() {
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, new WebGLFloatArray(mvMatrix.flatten()));
 
     //non-indexed:
-    gl.drawArrays(gl.TRIANGLES, 0, attributes[attr].numitems);
+    gl.drawArrays(vbo.mode, 0, vbo.numitems);
     //indexed: gl.drawElements(...)
 }
 

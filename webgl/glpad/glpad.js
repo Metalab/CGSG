@@ -76,7 +76,7 @@ function init() {
     applyButton.onclick();
 
     // Setup render function
-    setInterval(render, 60);
+    setInterval(render, 40);
 }
 
 function compileShader(shader, source) {

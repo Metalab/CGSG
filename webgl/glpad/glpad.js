@@ -1,7 +1,7 @@
 //to integrate new shader or geometry presets, just add the file name without extension 
 //to this list and place the file in the respective directory
 // the first entry of the list will be used as the default
-var geometryFiles = [ 'triangle', 'plane', 'texplane', 'house', 'cube' ];
+var geometryFiles = [ 'triangle', 'plane', 'texplane', 'house', 'cube', 'icosphere' ];
 var vertexShaderFiles = [ 'default', 'texture', 'vertexcolor' ];
 var fragmentShaderFiles = [ 'default', 'texture' ];
 

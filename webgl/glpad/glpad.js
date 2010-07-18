@@ -154,7 +154,14 @@ function setShaderData()
                 texture.image.onload = function() {
                     logInfo("Texture loaded.");
                     gl.bindTexture(gl.TEXTURE_2D, texture);
-                    gl.texImage2D(gl.TEXTURE_2D, 0, texture.image, true);
+                    gl.texImage2D(gl.TEXTURE_2D, 
+                                  0,  // level
+                                  gl.RGB,  // internalformat (ALPHA, LUMINANCE, 
+                                           // LUMINANCE_ALPHA, RGB, RGBA)
+                                  gl.RGB,  // format (ALPHA, RGB, RGBA, 
+                                           // LUMINANCE, LUMINANCE_ALPHA)
+                                  gl.UNSIGNED_BYTE,  // type
+                                  texture.image);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
                     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
                     gl.bindTexture(gl.TEXTURE_2D, null);

@@ -38,6 +38,8 @@
             this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
             this.btnGenerate = new System.Windows.Forms.Button();
+            this.labStatus = new System.Windows.Forms.Label();
+            this.pbStatus = new System.Windows.Forms.ProgressBar();
             this.mapView1 = new MapGetter.MapView();
             this.SuspendLayout();
             // 
@@ -84,7 +86,7 @@
             // tbStartZoom
             // 
             this.tbStartZoom.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.tbStartZoom.Location = new System.Drawing.Point(461, 570);
+            this.tbStartZoom.Location = new System.Drawing.Point(227, 570);
             this.tbStartZoom.Name = "tbStartZoom";
             this.tbStartZoom.Size = new System.Drawing.Size(100, 20);
             this.tbStartZoom.TabIndex = 5;
@@ -94,7 +96,7 @@
             // tbResolution
             // 
             this.tbResolution.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.tbResolution.Location = new System.Drawing.Point(461, 544);
+            this.tbResolution.Location = new System.Drawing.Point(227, 544);
             this.tbResolution.Name = "tbResolution";
             this.tbResolution.Size = new System.Drawing.Size(100, 20);
             this.tbResolution.TabIndex = 6;
@@ -105,7 +107,7 @@
             // 
             this.label3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(388, 547);
+            this.label3.Location = new System.Drawing.Point(154, 547);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(52, 13);
             this.label3.TabIndex = 7;
@@ -115,7 +117,7 @@
             // 
             this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(388, 573);
+            this.label4.Location = new System.Drawing.Point(154, 573);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(52, 13);
             this.label4.TabIndex = 8;
@@ -124,7 +126,7 @@
             // btnGenerate
             // 
             this.btnGenerate.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnGenerate.Location = new System.Drawing.Point(579, 568);
+            this.btnGenerate.Location = new System.Drawing.Point(345, 568);
             this.btnGenerate.Name = "btnGenerate";
             this.btnGenerate.Size = new System.Drawing.Size(75, 23);
             this.btnGenerate.TabIndex = 9;
@@ -132,11 +134,24 @@
             this.btnGenerate.UseVisualStyleBackColor = true;
             this.btnGenerate.Click += new System.EventHandler(this.btnGenerate_Click);
             // 
+            // labStatus
+            // 
+            this.labStatus.AutoSize = true;
+            this.labStatus.Location = new System.Drawing.Point(12, 603);
+            this.labStatus.Name = "labStatus";
+            this.labStatus.Size = new System.Drawing.Size(51, 13);
+            this.labStatus.TabIndex = 10;
+            this.labStatus.Text = "labStatus";
+            // 
+            // pbStatus
+            // 
+            this.pbStatus.Location = new System.Drawing.Point(69, 596);
+            this.pbStatus.Name = "pbStatus";
+            this.pbStatus.Size = new System.Drawing.Size(468, 23);
+            this.pbStatus.TabIndex = 11;
+            // 
             // mapView1
             // 
-            this.mapView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
             this.mapView1.Coordinates = ((System.Drawing.PointF)(resources.GetObject("mapView1.Coordinates")));
             this.mapView1.Location = new System.Drawing.Point(25, 12);
             this.mapView1.Name = "mapView1";
@@ -150,7 +165,9 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(769, 625);
+            this.ClientSize = new System.Drawing.Size(551, 625);
+            this.Controls.Add(this.pbStatus);
+            this.Controls.Add(this.labStatus);
             this.Controls.Add(this.btnGenerate);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label3);
@@ -161,6 +178,8 @@
             this.Controls.Add(this.tbLong);
             this.Controls.Add(this.tbLat);
             this.Controls.Add(this.mapView1);
+            this.MaximumSize = new System.Drawing.Size(567, 663);
+            this.MinimumSize = new System.Drawing.Size(567, 663);
             this.Name = "Form1";
             this.Text = "zoom cascade extractor";
             this.Load += new System.EventHandler(this.Form1_Load);
@@ -181,6 +200,8 @@
         private System.Windows.Forms.Label label3;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Button btnGenerate;
+        private System.Windows.Forms.Label labStatus;
+        private System.Windows.Forms.ProgressBar pbStatus;
     }
 }
 

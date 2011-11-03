@@ -545,7 +545,7 @@ $W.GLSL.ShaderProgram = function(name) {
 
         // Check for errors
         if (!$W.GL.getProgramParameter(this.glProgram, $W.GL.LINK_STATUS)) {
-            console.error("Link error in `" + this.name + "`\n" +
+            alert($W.GL.getProgramInfoLog(this.glProgram));
                     $W.GL.getProgramInfoLog(this.glProgram));
             dirty();
         }

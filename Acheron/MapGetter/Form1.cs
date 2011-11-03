@@ -9,11 +9,14 @@ using System.Windows.Forms;
 using System.IO;
 using System.Reflection;
 using System.Net;
+using System.Threading;
+using System.Drawing.Imaging;
 
 namespace MapGetter
 {
     public partial class Form1 : Form
     {
+        Random rand = new Random();
         string cacheDir;
 
         public Form1()
@@ -70,8 +73,18 @@ namespace MapGetter
             HandleTargetAreaChange(this, EventArgs.Empty);
         }
 
+        void SetStatus(int zoomLevel, int tileCount, int tilesFinished)
+        {
+            labStatus.Text = "Lvl " + zoomLevel;
+            pbStatus.Minimum = 0;
+            pbStatus.Maximum = tileCount;
+            pbStatus.Value = tilesFinished;
+        }
+
         private void btnGenerate_Click(object sender, EventArgs e)
         {
+            btnGenerate.Enabled = tbLat.Enabled = tbLong.Enabled = tbResolution.Enabled = tbStartZoom.Enabled = false;
+
             //get parameters
             double lat, lon;
             int startZoom, res;
@@ -93,27 +106,48 @@ namespace MapGetter
             if (folderDlg.ShowDialog() != DialogResult.OK) return;
             string folder = folderDlg.SelectedPath;
 
-            //compute pixel coordinates for the closest zoom level
-            var projection = new LiveMapsProjection(19);
-            double cx, cy;
-            projection.ToPixels(lat, lon, out cx, out cy);
-            long px, py;
-            px = (long)Math.Floor(cx) - res / 2;
-            py = (long)Math.Floor(cy) - res / 2;
-
-            var img = ExtractImage(px, py, res, res, 19);
-            img.Save(Path.Combine(folder, "19.png"), System.Drawing.Imaging.ImageFormat.Png);
-
-
-            for (int zoom = 18; zoom >= startZoom; zoom--)
+            ThreadPool.QueueUserWorkItem((state) =>
             {
-                //compute coordinates for the next rect
-                px = px / 2 - res / 4;
-                py = py / 2 - res / 4;
+                try
+                {
+                    //compute pixel coordinates for the closest zoom level
+                    var projection = new LiveMapsProjection(19);
+                    double cx, cy;
+                    projection.ToPixels(lat, lon, out cx, out cy);
+                    long px, py;
+                    px = (long)Math.Floor(cx) - res / 2;
+                    py = (long)Math.Floor(cy) - res / 2;
 
-                img = ExtractImage(px, py, res, res, zoom);
-                img.Save(Path.Combine(folder, zoom + ".png"), System.Drawing.Imaging.ImageFormat.Png);
-            }
+                    var img = ExtractImage(px, py, res, res, 19);
+                    img.Save(Path.Combine(folder, "19.jpg"), ImageFormat.Jpeg);
+
+
+                    for (int zoom = 18; zoom >= startZoom; zoom--)
+                    {
+                        //compute coordinates for the next rect
+                        px = px / 2 - res / 4;
+                        py = py / 2 - res / 4;
+
+                        img = ExtractImage(px, py, res, res, zoom);
+                        img.Save(Path.Combine(folder, zoom + ".jpg"), ImageFormat.Jpeg);
+                    }
+
+                    BeginInvoke(new Action<Exception>(DownloadFinished), new object[] { null });
+                }
+                catch (Exception ex)
+                {
+                    BeginInvoke(new Action<Exception>(DownloadFinished), ex);
+                }
+            });
+        }
+
+        void DownloadFinished(Exception ex)
+        {
+            btnGenerate.Enabled = tbLat.Enabled = tbLong.Enabled = tbResolution.Enabled = tbStartZoom.Enabled = true;
+            if (ex == null)
+                MessageBox.Show("Download finished OK.");
+            else
+                MessageBox.Show("Download aborted with Exception: " + ex.ToString());
         }
 
         Image ExtractImage(long x, long y, int width, int height, int zoomLevel)
@@ -133,11 +167,14 @@ namespace MapGetter
             using (var g = Graphics.FromImage(img))
             {
                 for (int col = 0; col < nrTilesHorizontal; col++)
+                {
                     for (int row = 0; row < nrTilesVertical; row++)
                     {
                         using (Image tile = GetTile(startColumn + col, startRow + row, zoomLevel))
                             g.DrawImage(tile, LiveMapsProjection.TileSize * col, LiveMapsProjection.TileSize * row);
                     }
+                    BeginInvoke(new Action<int, int, int>(SetStatus), zoomLevel, nrTilesHorizontal * nrTilesVertical, col*nrTilesVertical);
+                }
             }
 
             //now cut out the part we need if necessary
@@ -169,17 +206,32 @@ namespace MapGetter
                 column <<= 1;
             }
 
-            sb.Append(".jpeg");
-
             //get the image
-            var path = Path.Combine(cacheDir, sb.ToString());
+            var path = Path.Combine(cacheDir, sb.ToString() + ".png");
             if (File.Exists(path)) return Image.FromFile(path); 
 
             //retrieve the image from the server
-            var req = WebRequest.Create("http://ecn.t3.tiles.virtualearth.net/tiles/" + sb.ToString() + "?g=0");
-            var img = Image.FromStream(req.GetResponse().GetResponseStream());
-            img.Save(path, System.Drawing.Imaging.ImageFormat.Png);
-            return img;
+            int startServer = rand.Next(0, 4);
+            Exception lastEx = null;
+            for (int i = 0; i < 4; i++)
+            {
+                
+                try
+                {
+                    var req = WebRequest.Create("http://ecn.t" + startServer + ".tiles.virtualearth.net/tiles/" + sb.ToString() + ".jpeg?g=0");
+                    var img = Image.FromStream(req.GetResponse().GetResponseStream());
+                    img.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                    return img;
+                }
+                catch (WebException ex)
+                {
+                    lastEx = ex;
+                    System.Threading.Thread.Sleep(rand.Next(400, 1200));
+                }
+                startServer = (startServer+1)%4;
+            }
+
+            throw new Exception("Download failed on all servers.", lastEx);
         }
     }
 }

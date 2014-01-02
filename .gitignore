@@ -1,0 +1,32 @@
+
+# /Acheron/
+/Acheron/Debug
+/Acheron/*.user
+/Acheron/*.suo
+/Acheron/*.ncb
+/Acheron/Release
+
+# /Acheron/MapGetter/
+/Acheron/MapGetter/bin
+/Acheron/MapGetter/obj
+/Acheron/MapGetter/*.suo
+
+# /Acheron/src/effects/Asdf/
+/Acheron/src/effects/Asdf/asdf_notes.txt
+
+# /Acheron/workingDir/
+/Acheron/workingDir/kandel_maschine_sample1.ogg
+/Acheron/workingDir/fmodex.dll
+/Acheron/workingDir/glew32.dll
+/Acheron/workingDir/jpeg.dll
+/Acheron/workingDir/libfreetype-6.dll
+/Acheron/workingDir/libpng12-0.dll
+/Acheron/workingDir/libtiff-3.dll
+/Acheron/workingDir/SDL.dll
+/Acheron/workingDir/SDL_image.dll
+/Acheron/workingDir/SDL_ttf.dll
+/Acheron/workingDir/zlib1.dll
+
+# /webgl/webglu/
+/webgl/webglu/doc
+/webgl/webglu/examples
